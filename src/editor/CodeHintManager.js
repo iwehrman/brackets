@@ -29,31 +29,79 @@ define(function (require, exports, module) {
     "use strict";
     
     // Load dependent modules
-    var HTMLUtils       = require("language/HTMLUtils"),
-        Menus           = require("command/Menus"),
-        StringUtils     = require("utils/StringUtils"),
-        EditorManager   = require("editor/EditorManager"),
-        PopUpManager    = require("widgets/PopUpManager"),
-        ViewUtils       = require("utils/ViewUtils"),
-        KeyEvent        = require("utils/KeyEvent");
+    var KeyEvent        = require("utils/KeyEvent"),
+        CodeHintList    = require("editor/CodeHintList").CodeHintList;
 
 
     var hintProviders = {},
-        triggeredHintProviders = [],
-        hintList,
-        keyDownEditor;
+        lastChar,
+        sessionProvider,
+        sessionEditor,
+        hintList;
+    
+    /**
+     * Handles keys related to displaying, searching, and navigating the hint list. 
+     * This gets called before handleChange.
+     * @param {Editor} editor
+     * @param {KeyboardEvent} event
+     */
+    function handleKeyEvent(editor, event) {
 
+        if (_inSession() && editor != sessionEditor) {
+            _endSession();
+        }
+
+        if (event.type === "keydown") {
+            if (event.keyCode === 32 && event.ctrlKey) {
+                event.preventDefault();
+                if (!_inSession()) {
+                    lastChar = null;
+                    console.log("Explicit");
+                    _beginSession(editor);
+                }
+            }
+        } else if (event.type === "keypress") {
+            lastChar = String.fromCharCode(event.charCode);
+            console.log("Implicit (keypress) " + event.keyCode + " : " + String.fromCharCode(event.charCode));
+        } 
+
+        // Pass to the hint list, if it's open
+        if (hintList && hintList.isOpen()) {
+            hintList.handleKeyEvent(event);
+        }
+    }
+    
+    /**
+     * Called by the editor after handleKeyEvent
+     */
+    function handleChange(editor) {
+
+        console.log("Implicit (handleChange) : " + lastChar);
+
+        // FIXME: end the session on "complex" changes
+        if (!_inSession() && lastChar) {
+            _beginSession(editor);
+        } else if (_inSession()) {
+            _updateHintList();
+        }
+    }
+    
     /** Comparator to sort providers based on their specificity */
     function _providerSort(a, b) {
         return b.specificity - a.specificity;
     }
-
+    
     /** 
-     *  If there is any provider for all modes, then add it to each individual
-     *  mode providers list and re-sort them based on their specificity.
+     *  Return the array of hint providers for the given mode.
+     *  If this is called for the first time, then we check if any provider wants to show
+     *  hints on all modes. If there is any, then we merge it into each individual
+     *  mode provider list.
+     *
+     * @param {(string|Object<name: string>)} mode
+     * @return {Array.<{provider: Object, modes: Array.<string>, specificity: number}>}
      */
-    function _mergeAllModeToIndividualMode() {
-        var allModeProviders = [];
+    function _getProvidersForMode(mode) {
+        var allModeProviders;
         if (hintProviders.all) {
             allModeProviders = hintProviders.all;
             
@@ -68,429 +116,95 @@ define(function (require, exports, module) {
                 }
             });
         }
-    }
-    
-    /** 
-     *  Return the array of hint providers for the given mode.
-     *  If this is called for the first time, then we check if any provider wants to show
-     *  hints on all modes. If there is any, then we merge it into each individual
-     *  mode provider list.
-     *
-     * @param {(string|Object<name: string>)} mode
-     * @return {Array.<{provider: Object, modes: Array.<string>, specificity: number}>}
-     */
-    function _getEnabledHintProviders(mode) {
-        if (hintProviders.all) {
-            _mergeAllModeToIndividualMode();
-        }
         
         var modeName = (typeof mode === "string") ? mode : mode.name;
         return hintProviders[modeName] || [];
     }
     
-    /**
-     * @constructor
-     *
-     * Displays a popup list of code completions.
-     * Currently only HTML tags are supported, but this will greatly be extended in coming sprint
-     * to include: extensibility API, HTML attributes hints, JavaScript hints, CSS hints
-     */
-    function CodeHintList() {
-        this.currentProvider = null;
-        this.query = {queryStr: null};
-        this.displayList = [];
-        this.options = {
-            maxResults: 999
-        };
+    function _updateHintList() {
 
-        this.opened = false;
-        this.selectedIndex = -1;
-        this.editor = null;
+        if (!_inSession()) {
+            throw "Updated hint list outside of a session";
+        }
 
-        this.$hintMenu = $("<li class='dropdown codehint-menu'></li>");
-        var $toggle = $("<a href='#' class='dropdown-toggle'></a>")
-            .hide();
+        console.log("_updateHintList");
 
-        this.$hintMenu.append($toggle)
-            .append("<ul class='dropdown-menu'></ul>");
+        var response = sessionProvider.getHints(lastChar);
+
+        if (!response) {
+            lastChar = null;
+            _endSession();
+        } else {
+            if (!hintList.isOpen()) {
+                hintList.open(response.hints, response.match, response.selectInitial);
+            } else {
+                hintList.update(response.hints, response.match, response.selectInitial);
+            }
+            lastChar = null;
+        }   
     }
-
-    /**
-     * @private
-     * Enters the code completion text into the editor and closes list if the provider 
-     * returns true. Otherwise, get a new query and update the list based on the new query.
-     * @string {string} completion - text to insert into current code editor
-     */
-    CodeHintList.prototype._handleItemClick = function (completion) {
-        if (this.currentProvider.handleSelect(completion, this.editor, this.editor.getCursorPos())) {
-            this.close();
-        } else {
-            this.updateQueryAndList();
-        }
-    };
-
-    /**
-     * Adds a single item to the hint list
-     * @param {string} name
-     */
-    CodeHintList.prototype.addItem = function (name) {
-        var self = this;
-        var displayName = name.replace(
-            new RegExp(StringUtils.regexEscape(this.query.queryStr), "i"),
-            "<strong>$&</strong>"
-        );
-
-        var $item = $("<li><a href='#'><span class='codehint-item'>" + displayName + "</span></a></li>")
-            .on("click", function (e) {
-                // Don't let the click propagate upward (otherwise it will hit the close handler in
-                // bootstrap-dropdown).
-                e.stopPropagation();
-                self._handleItemClick(name);
-            });
-
-        this.$hintMenu.find("ul.dropdown-menu")
-            .append($item);
-    };
-
-    /**
-     * Rebuilds the hint list based on this.query
-     */
-    CodeHintList.prototype.updateList = function () {
-        this.displayList = this.currentProvider.search(this.query);
-        this.buildListView();
-    };
-
-    /**
-     * Removes all list items from hint list
-     */
-    CodeHintList.prototype.clearList = function () {
-        this.$hintMenu.find("li").remove();
-    };
-            
-    /**
-     * Rebuilds the list items for the hint list based on this.displayList
-     */
-    CodeHintList.prototype.buildListView = function () {
-        this.clearList();
-        var self = this;
-        var count = 0;
-        $.each(this.displayList, function (index, item) {
-            if (count > self.options.maxResults) {
-                return false;
-            }
-            self.addItem(item);
-            count++;
-        });
-
-        if (count === 0) {
-            this.close();
-        } else if (this.currentProvider.wantInitialSelection()) {
-            // Select the first item in the list
-            this.setSelectedIndex(0);
-        }
-    };
-
-
-    /**
-     * Selects the item in the hint list specified by index
-     * @param {number} index
-     */
-    CodeHintList.prototype.setSelectedIndex = function (index) {
-        var items = this.$hintMenu.find("li");
-        
-        // Range check
-        index = Math.max(0, Math.min(index, items.length - 1));
-        
-        // Clear old highlight
-        if (this.selectedIndex !== -1) {
-            $(items[this.selectedIndex]).find("a").removeClass("highlight");
-        }
-        
-        // Highlight the new selected item
-        this.selectedIndex = index;
-
-        if (this.selectedIndex !== -1) {
-            var $item = $(items[this.selectedIndex]);
-            var $view = this.$hintMenu.find("ul.dropdown-menu");
-
-            ViewUtils.scrollElementIntoView($view, $item, false);
-            $item.find("a").addClass("highlight");
-        }
-    };
-    
     
     /**
-     * Gets the new query from the current provider and rebuilds the hint list based on the new one.
+     * Try to begin a new hinting session with the given editor. This will only 
+     * succeed if a session provider is successfully chosen. 
      */
-    CodeHintList.prototype.updateQueryAndList = function () {
-        this.query = this.currentProvider.getQueryInfo(this.editor, this.editor.getCursorPos());
-        this.updateList();
+    function _beginSession(editor) {
 
-        // Update the CodeHintList location
-        if (this.displayList.length) {
-            var hintPos = this.calcHintListLocation();
-            this.$hintMenu.css({"left": hintPos.left, "top": hintPos.top});
-        }
-    };
+        console.log("_beginSession");
 
-    /**
-     * Handles key presses when the hint list is being displayed
-     * @param {Editor} editor
-     * @param {KeyBoardEvent} keyEvent
-     */
-    CodeHintList.prototype.handleKeyEvent = function (editor, event) {
-        var keyCode = event.keyCode;
-        
-        // Up arrow, down arrow and enter key are always handled here
-        if (event.type !== "keypress") {
-            // If we don't have a selection in the list, then just update the list and
-            // show it at the new location for Return and Tab keys.
-            if (this.selectedIndex === -1 && (keyCode === KeyEvent.DOM_VK_RETURN || keyCode === KeyEvent.DOM_VK_TAB)) {
-                this.updateQueryAndList();
-                return;
-            }
-            
-            if (keyCode === KeyEvent.DOM_VK_RETURN || keyCode === KeyEvent.DOM_VK_TAB ||
-                    keyCode === KeyEvent.DOM_VK_UP || keyCode === KeyEvent.DOM_VK_DOWN ||
-                    keyCode === KeyEvent.DOM_VK_PAGE_UP || keyCode === KeyEvent.DOM_VK_PAGE_DOWN) {
+        var mode = editor.getModeForSelection(), 
+            enabledProviders = _getProvidersForMode(mode);
 
-                var isNavigationKey = (keyCode !== KeyEvent.DOM_VK_RETURN && keyCode !== KeyEvent.DOM_VK_TAB);
-                if (event.type === "keydown") {
-                    if (keyCode === KeyEvent.DOM_VK_UP) {
-                        // Up arrow
-                        this.setSelectedIndex(this.selectedIndex - 1);
-                    } else if (keyCode === KeyEvent.DOM_VK_DOWN) {
-                        // Down arrow
-                        this.setSelectedIndex(this.selectedIndex + 1);
-                    } else if (keyCode === KeyEvent.DOM_VK_PAGE_UP) {
-                        // Page Up
-                        this.setSelectedIndex(this.selectedIndex - this.getItemsPerPage());
-                    } else if (keyCode === KeyEvent.DOM_VK_PAGE_DOWN) {
-                        // Page Down
-                        this.setSelectedIndex(this.selectedIndex + this.getItemsPerPage());
-                    } else {
-                        // Enter/return key or Tab key
-                        // Trigger a click handler to commmit the selected item
-                        $(this.$hintMenu.find("li")[this.selectedIndex]).triggerHandler("click");
-                    }
-                }
-
-                event.preventDefault();
-                return;
-            }
-        }
-        
-        // All other key events trigger a rebuild of the list, but only
-        // on keyup events
-        if (event.type === "keyup") {
-            this.updateQueryAndList();
-        }
-    };
-
-    /**
-     * Return true if the CodeHintList is open.
-     * @return {boolean}
-     */
-    CodeHintList.prototype.isOpen = function () {
-        // We don't get a notification when the dropdown closes. The best
-        // we can do is keep an "opened" flag and check to see if we
-        // still have the "open" class applied.
-        if (this.opened && !this.$hintMenu.hasClass("open")) {
-            this.opened = false;
-        }
-        
-        return this.opened;
-    };
-    
-    /**
-     * Displays the hint list at the current cursor position
-     * @param {Editor} editor
-     */
-    CodeHintList.prototype.open = function (editor) {
-        var self = this,
-            mode = editor.getModeForSelection(),
-            enabledProviders = [];
-
-        if (triggeredHintProviders.length > 0) {
-            enabledProviders = triggeredHintProviders;
-        } else {
-            enabledProviders = _getEnabledHintProviders(mode);
-        }
-        
-        if (enabledProviders.length === 0) {
-            return;
-        }
-        
-        this.editor = editor;
-        Menus.closeAll();
-
-        this.currentProvider = null;
+        // Check if any provider wants to start showing hints on this key.
         $.each(enabledProviders, function (index, item) {
-            var query = item.provider.getQueryInfo(self.editor, self.editor.getCursorPos());
-            if (query.queryStr !== null) {
-                self.query = query;
-                self.currentProvider = item.provider;
+            if (item.provider.hasHints(editor, lastChar)) {
+                sessionProvider = item.provider;
                 return false;
             }
+            return true;
         });
-        
-        if (!this.currentProvider) {
-            return;
-        }
 
-        this.updateList();
-    
-        if (this.displayList.length) {
-            // Need to add the menu to the DOM before trying to calculate its ideal location.
-            $("#codehint-menu-bar > ul").append(this.$hintMenu);
-            
-            var hintPos = this.calcHintListLocation();
-            
-            this.$hintMenu.addClass("open")
-                .css({"left": hintPos.left, "top": hintPos.top});
-            this.opened = true;
-            
-            PopUpManager.addPopUp(this.$hintMenu,
-                function () {
-                    self.close();
-                },
-                true);
-        }
-    };
-
-    /**
-     * Closes the hint list
-     */
-    CodeHintList.prototype.close = function () {
-        // TODO: Due to #1381, this won't get called if the user clicks out of the code hint menu.
-        // That's (sort of) okay right now since it doesn't really matter if a single old invisible
-        // code hint list is lying around (it'll get closed the next time the user pops up a code
-        // hint). Once #1381 is fixed this issue should go away.
-        this.$hintMenu.removeClass("open");
-        this.opened = false;
-        this.currentProvider = null;
-        
-        PopUpManager.removePopUp(this.$hintMenu);
-        this.$hintMenu.remove();
-        if (hintList === this) {
-            hintList = null;
-            keyDownEditor = null;
-        }
-    };
-        
-    /**
-     * Computes top left location for hint list so that the list is not clipped by the window
-     * @return {Object.<left: number, top: number> }
-     */
-    CodeHintList.prototype.calcHintListLocation = function () {
-        var cursor = this.editor._codeMirror.cursorCoords(),
-            posTop  = cursor.y,
-            posLeft = cursor.x,
-            $window = $(window),
-            $menuWindow = this.$hintMenu.children("ul");
-
-        // TODO Ty: factor out menu repositioning logic so code hints and Context menus share code
-        // adjust positioning so menu is not clipped off bottom or right
-        var bottomOverhang = posTop + 25 + $menuWindow.height() - $window.height();
-        if (bottomOverhang > 0) {
-            posTop -= (27 + $menuWindow.height());
-        }
-        // todo: should be shifted by line height
-        posTop -= 15;   // shift top for hidden parent element
-        //posLeft += 5;
-
-        var rightOverhang = posLeft + $menuWindow.width() - $window.width();
-        if (rightOverhang > 0) {
-            posLeft = Math.max(0, posLeft - rightOverhang);
-        }
-
-        return {left: posLeft, top: posTop};
-    };
-
-    /**
-     * @private
-     * Calculate the number of items per scroll page. Used for PageUp and PageDown.
-     * @return {number}
-     */
-    CodeHintList.prototype.getItemsPerPage = function () {
-        var itemsPerPage = 1,
-            $items = this.$hintMenu.find("li"),
-            $view = this.$hintMenu.find("ul.dropdown-menu"),
-            itemHeight;
-
-        if ($items.length !== 0) {
-            itemHeight = $($items[0]).height();
-            if (itemHeight) {
-                // round down to integer value
-                itemsPerPage = Math.floor($view.height() / itemHeight);
-                itemsPerPage = Math.max(1, Math.min(itemsPerPage, $items.length));
-            }
-        }
-
-        return itemsPerPage;
-    };
-        
-     /**
-      * Show the code hint list near the current cursor position for the specified editor
-      * @param {Editor}
-      */
-    function showHint(editor) {
-        if (hintList) {
-            hintList.close();
-        }
-        hintList = new CodeHintList();
-        hintList.open(editor);
-    }
-    
-    /**
-     * Handles keys related to displaying, searching, and navigating the hint list
-     * @param {Editor} editor
-     * @param {KeyboardEvent} event
-     */
-    function handleKeyEvent(editor, event) {
-        var mode = editor.getModeForSelection(),
-            enabledProviders = [],
-            key;
-        
-        // Check for Control+Space
-        if (event.type === "keydown" && event.keyCode === 32 && event.ctrlKey) {
-            triggeredHintProviders = [];
-            showHint(editor);
-            event.preventDefault();
-        } else if (event.type === "keypress") {
-            mode = editor.getModeForSelection();
-            enabledProviders = _getEnabledHintProviders(mode);
-
-            triggeredHintProviders = [];
-            if (enabledProviders.length > 0) {
-                key = String.fromCharCode(event.charCode);
-                // Check if any provider wants to start showing hints on this key.
-                $.each(enabledProviders, function (index, item) {
-                    if (item.provider.shouldShowHintsOnKey(key)) {
-                        triggeredHintProviders.push(item);
-                    }
-                });
-      
-                if (triggeredHintProviders.length > 0) {
-                    keyDownEditor = editor;
+        if (sessionProvider) {
+            sessionEditor = editor;
+            hintList = new CodeHintList(sessionEditor);
+            hintList.onSelect(function (hint) {
+                var restart = sessionProvider.insertHint(hint), 
+                    previousEditor = sessionEditor;
+                
+                _endSession();
+                if (restart) {
+                    _beginSession(previousEditor);
                 }
-            }
-        }
-
-        // Pass to the hint list, if it's open
-        if (hintList && hintList.isOpen()) {
-            hintList.handleKeyEvent(editor, event);
+            });
+            hintList.onClose(_endSession);
+            _updateHintList();
         }
     }
-    
+
     /**
-     *
+     * End the current hinting session
+     */ 
+    function _endSession() {
+
+        console.log("_endSession");
+
+        hintList.close();
+        hintList = null;
+        sessionProvider = null;
+        sessionEditor = null;
+
+        if (lastChar !== null) {
+            throw "lastChar is not null at session end!"
+        }   
+    }
+
+
+
+    /** 
+     * Is there an active hinting session? 
      */
-    function handleChange(editor) {
-        if (triggeredHintProviders.length > 0 && keyDownEditor === editor) {
-            keyDownEditor = null;
-            showHint(editor);
-        }
+    function _inSession() {
+        return !!sessionProvider;
     }
 
     /**
@@ -554,7 +268,6 @@ define(function (require, exports, module) {
     // Define public API
     exports.handleKeyEvent          = handleKeyEvent;
     exports.handleChange            = handleChange;
-    exports.showHint                = showHint;
     exports._getCodeHintList        = _getCodeHintList;
     exports.registerHintProvider    = registerHintProvider;
 });
