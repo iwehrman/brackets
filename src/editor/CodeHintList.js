@@ -29,10 +29,8 @@ define(function (require, exports, module) {
     "use strict";
     
     // Load dependent modules
-    var HTMLUtils       = require("language/HTMLUtils"),
-        Menus           = require("command/Menus"),
+    var Menus           = require("command/Menus"),
         StringUtils     = require("utils/StringUtils"),
-        EditorManager   = require("editor/EditorManager"),
         PopUpManager    = require("widgets/PopUpManager"),
         ViewUtils       = require("utils/ViewUtils"),
         KeyEvent        = require("utils/KeyEvent");
@@ -214,15 +212,15 @@ define(function (require, exports, module) {
      * Displays the hint list at the current cursor position
      * @param {Editor} editor
      */
-    CodeHintList.prototype.open = function (hints, match, initialSelect) {
+    CodeHintList.prototype.open = function (response) {
         
 
         console.log("HintList.open");
 
         var self = this;
-        this.query = {queryStr: match};
-        this.displayList = hints;
-        this.initialSelect = initialSelect;
+        this.query = {queryStr: response.match};
+        this.displayList = response.hints;
+        this.initialSelect = response.selectInitial;
 
         Menus.closeAll();
         this._buildListView();
@@ -244,13 +242,13 @@ define(function (require, exports, module) {
     /**
      * Gets the new query from the current provider and rebuilds the hint list based on the new one.
      */
-    CodeHintList.prototype.update = function (hints, match, initialSelect) {
+    CodeHintList.prototype.update = function (response) {
 
         console.log("HintList.update");
 
-        this.query = {queryStr: match};
-        this.displayList = hints; 
-        this.initialSelect = initialSelect;
+        this.query = {queryStr: response.match};
+        this.displayList = response.hints; 
+        this.initialSelect = response.selectInitial;
 
         this._buildListView();
 

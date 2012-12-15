@@ -38,173 +38,12 @@ define(function (require, exports, module) {
         sessionProvider,
         sessionEditor,
         hintList;
-    
+
     /**
-     * Handles keys related to displaying, searching, and navigating the hint list. 
-     * This gets called before handleChange.
-     * @param {Editor} editor
-     * @param {KeyboardEvent} event
+     * Comparator to sort providers based on their specificity
      */
-    function handleKeyEvent(editor, event) {
-
-        if (_inSession() && editor != sessionEditor) {
-            _endSession();
-        }
-
-        if (event.type === "keydown") {
-            if (event.keyCode === 32 && event.ctrlKey) {
-                event.preventDefault();
-                if (!_inSession()) {
-                    lastChar = null;
-                    console.log("Explicit");
-                    _beginSession(editor);
-                }
-            }
-        } else if (event.type === "keypress") {
-            lastChar = String.fromCharCode(event.charCode);
-            console.log("Implicit (keypress) " + event.keyCode + " : " + String.fromCharCode(event.charCode));
-        } 
-
-        // Pass to the hint list, if it's open
-        if (hintList && hintList.isOpen()) {
-            hintList.handleKeyEvent(event);
-        }
-    }
-    
-    /**
-     * Called by the editor after handleKeyEvent
-     */
-    function handleChange(editor) {
-
-        console.log("Implicit (handleChange) : " + lastChar);
-
-        // FIXME: end the session on "complex" changes
-        if (!_inSession() && lastChar) {
-            _beginSession(editor);
-        } else if (_inSession()) {
-            _updateHintList();
-        }
-    }
-    
-    /** Comparator to sort providers based on their specificity */
     function _providerSort(a, b) {
         return b.specificity - a.specificity;
-    }
-    
-    /** 
-     *  Return the array of hint providers for the given mode.
-     *  If this is called for the first time, then we check if any provider wants to show
-     *  hints on all modes. If there is any, then we merge it into each individual
-     *  mode provider list.
-     *
-     * @param {(string|Object<name: string>)} mode
-     * @return {Array.<{provider: Object, modes: Array.<string>, specificity: number}>}
-     */
-    function _getProvidersForMode(mode) {
-        var allModeProviders;
-        if (hintProviders.all) {
-            allModeProviders = hintProviders.all;
-            
-            // Remove "all" mode list since we don't need it any more after
-            // merging them to each individual mode provider lists.
-            delete hintProviders.all;
-            
-            $.each(hintProviders, function (key, value) {
-                if (hintProviders[key]) {
-                    hintProviders[key] = hintProviders[key].concat(allModeProviders);
-                    hintProviders[key].sort(_providerSort);
-                }
-            });
-        }
-        
-        var modeName = (typeof mode === "string") ? mode : mode.name;
-        return hintProviders[modeName] || [];
-    }
-    
-    function _updateHintList() {
-
-        if (!_inSession()) {
-            throw "Updated hint list outside of a session";
-        }
-
-        console.log("_updateHintList");
-
-        var response = sessionProvider.getHints(lastChar);
-
-        if (!response) {
-            lastChar = null;
-            _endSession();
-        } else {
-            if (!hintList.isOpen()) {
-                hintList.open(response.hints, response.match, response.selectInitial);
-            } else {
-                hintList.update(response.hints, response.match, response.selectInitial);
-            }
-            lastChar = null;
-        }   
-    }
-    
-    /**
-     * Try to begin a new hinting session with the given editor. This will only 
-     * succeed if a session provider is successfully chosen. 
-     */
-    function _beginSession(editor) {
-
-        console.log("_beginSession");
-
-        var mode = editor.getModeForSelection(), 
-            enabledProviders = _getProvidersForMode(mode);
-
-        // Check if any provider wants to start showing hints on this key.
-        $.each(enabledProviders, function (index, item) {
-            if (item.provider.hasHints(editor, lastChar)) {
-                sessionProvider = item.provider;
-                return false;
-            }
-            return true;
-        });
-
-        if (sessionProvider) {
-            sessionEditor = editor;
-            hintList = new CodeHintList(sessionEditor);
-            hintList.onSelect(function (hint) {
-                var restart = sessionProvider.insertHint(hint), 
-                    previousEditor = sessionEditor;
-                
-                _endSession();
-                if (restart) {
-                    _beginSession(previousEditor);
-                }
-            });
-            hintList.onClose(_endSession);
-            _updateHintList();
-        }
-    }
-
-    /**
-     * End the current hinting session
-     */ 
-    function _endSession() {
-
-        console.log("_endSession");
-
-        hintList.close();
-        hintList = null;
-        sessionProvider = null;
-        sessionEditor = null;
-
-        if (lastChar !== null) {
-            throw "lastChar is not null at session end!"
-        }   
-    }
-
-
-
-    /** 
-     * Is there an active hinting session? 
-     */
-    function _inSession() {
-        return !!sessionProvider;
     }
 
     /**
@@ -256,6 +95,178 @@ define(function (require, exports, module) {
                 }
             });
         }
+    }
+
+    /** 
+     *  Return the array of hint providers for the given mode.
+     *  If this is called for the first time, then we check if any provider wants to show
+     *  hints on all modes. If there is any, then we merge it into each individual
+     *  mode provider list.
+     *
+     * @param {(string|Object<name: string>)} mode
+     * @return {Array.<{provider: Object, modes: Array.<string>, specificity: number}>}
+     */
+    function _getProvidersForMode(mode) {
+
+        var allModeProviders;
+        if (hintProviders.all) {
+            allModeProviders = hintProviders.all;
+            
+            // Remove "all" mode list since we don't need it any more after
+            // merging them to each individual mode provider lists.
+            delete hintProviders.all;
+            
+            $.each(hintProviders, function (key, value) {
+                if (hintProviders[key]) {
+                    hintProviders[key] = hintProviders[key].concat(allModeProviders);
+                    hintProviders[key].sort(_providerSort);
+                }
+            });
+        }
+        
+        var modeName = (typeof mode === "string") ? mode : mode.name;
+        return hintProviders[modeName] || [];
+    }
+    
+    /**
+     * Handles keys related to displaying, searching, and navigating the hint list. 
+     * This gets called before handleChange.
+     * @param {Editor} editor
+     * @param {KeyboardEvent} event
+     */
+    function handleKeyEvent(editor, event) {
+        if (_inSession() && editor != sessionEditor) {
+            _endSession();
+        }
+
+        if (event.type === "keydown") {
+            if (event.keyCode === 32 && event.ctrlKey) {
+                event.preventDefault();
+
+                if (_inSession()) {
+                    _endSession();
+                }
+
+                lastChar = null;
+                console.log("New explicit session");
+                _beginSession(editor);
+            }
+        } else if (event.type === "keypress") {
+            console.log("keypress: " + event.charCode);
+            lastChar = String.fromCharCode(event.charCode);            
+        } else if (event.type === "keyup") {
+            if (_inSession()) {
+                if (event.keyCode != 32 && event.ctrlKey) {
+                    _endSession();
+                } else if (event.keyCode === KeyEvent.DOM_VK_LEFT ||
+                        event.keyCode === KeyEvent.DOM_VK_RIGHT) {
+                    _updateHintList();
+                }
+            }
+        }
+
+        // Pass to the hint list, if it's open
+        if (hintList && hintList.isOpen()) {
+            hintList.handleKeyEvent(event);
+        }
+    }
+    
+    /**
+     * Start a new implicit hinting session, or update the existing hint list. 
+     * Called by the editor after handleKeyEvent, which is responsible for setting
+     * the lastChar.
+     */
+    function handleChange(editor) {
+        // FIXME: end the session on "complex" changes
+        if (!_inSession() && lastChar) {
+            console.log("New implicit session: " + lastChar);
+            _beginSession(editor);
+        } else if (_inSession()) {
+            _updateHintList();
+        }
+    }
+
+    /**
+     * From an active hinting session, get hints from the current provider and
+     * render the hint list window.
+     */
+    function _updateHintList() {
+        console.log("_updateHintList");
+
+        if (!_inSession()) {
+            throw "Updated hint list outside of a session";
+        }
+
+        var response = sessionProvider.getHints(lastChar);
+        lastChar = null;
+
+        if (!response) {
+            _endSession();
+        } else if (hintList.isOpen()) {
+            hintList.update(response);
+        } else {
+            hintList.open(response);
+        }
+    }
+    
+    /**
+     * Try to begin a new hinting session with the given editor. 
+     */
+    function _beginSession(editor) {
+        console.log("_beginSession");
+
+        // Find a suitable provider, if any
+        var mode = editor.getModeForSelection(), 
+            enabledProviders = _getProvidersForMode(mode);
+        
+        $.each(enabledProviders, function (index, item) {
+            if (item.provider.hasHints(editor, lastChar)) {
+                sessionProvider = item.provider;
+                return false;
+            }
+            return true;
+        });
+
+        // If a provider is found, initialize the hint list and update it
+        if (sessionProvider) {
+            sessionEditor = editor;
+
+            hintList = new CodeHintList(sessionEditor);
+            hintList.onSelect(function (hint) {
+                var restart = sessionProvider.insertHint(hint), 
+                    previousEditor = sessionEditor;
+                _endSession();
+                if (restart) {
+                    _beginSession(previousEditor);
+                }
+            });
+            hintList.onClose(_endSession);
+
+            _updateHintList();
+        }
+    }
+
+    /**
+     * End the current hinting session
+     */ 
+    function _endSession() {
+        console.log("_endSession");
+
+        hintList.close();
+        hintList = null;
+        sessionProvider = null;
+        sessionEditor = null;
+
+        if (lastChar !== null) {
+            throw "lastChar is not null at session end!"
+        }
+    }
+
+    /** 
+     * Is there a hinting session active? 
+     */
+    function _inSession() {
+        return !!sessionProvider;
     }
 
     /**
