@@ -136,6 +136,43 @@ define(function (require, exports, module) {
     TagHints.prototype.wantInitialSelection = function () {
         return true;
     };
+    
+    function hasHints(editor, key) {
+        this.editor = editor;
+        if (!key) {
+            var query = this.getQueryInfo(editor, editor.getCursorPos());
+            return (query.queryStr !== null);
+        } else {
+            return this.shouldShowHintsOnKey(key);
+        }
+    }
+    
+    function getHints(key) {
+        var query = this.getQueryInfo(this.editor, this.editor.getCursorPos());
+        var tags = this.search(query);
+        return { 
+            hints: tags, 
+            match: query.queryStr, 
+            selectInitial: this.wantInitialSelection() };
+    }
+    
+    function insertHint(hint) {
+        return !(this.handleSelect(hint, this.editor, this.editor.getCursorPos()));
+    }
+    
+    // --- START HACK --- 
+    TagHints.prototype.hasHints = function (editor, key) {
+        return hasHints.apply(this, [editor, key]);
+    };
+        
+    TagHints.prototype.getHints = function (key) {
+        return getHints.apply(this, [key]);
+    };
+    
+    TagHints.prototype.insertHint = function (hint) {
+        return insertHint.apply(this, [hint])
+    };
+    // --- END HACK --- 
 
     /**
      * @constructor
@@ -233,7 +270,8 @@ define(function (require, exports, module) {
 
             // Since we're now inside the double-quotes we just inserted,
             // immediately pop up the attribute value hint.
-            CodeHintManager.showHint(editor);
+            return false;
+            // CodeHintManager.showHint(editor);
         } else if (tokenType === HTMLUtils.ATTR_VALUE && tagInfo.attr.hasEndQuote) {
             // Move the cursor to the right of the existing end quote after value insertion.
             editor.setCursorPos(start.line, start.ch + completion.length + 1);
@@ -493,6 +531,20 @@ define(function (require, exports, module) {
     AttrHints.prototype.wantInitialSelection = function () {
         return true;
     };
+    
+    // --- START HACK --- 
+    AttrHints.prototype.hasHints = function (editor, key) {
+        return hasHints.apply(this, [editor, key]);
+    };
+        
+    AttrHints.prototype.getHints = function (key) {
+        return getHints.apply(this, [key]);
+    };
+    
+    AttrHints.prototype.insertHint = function (hint) {
+        return insertHint.apply(this, [hint])
+    };
+    // --- END HACK --- 
 
     var tagHints = new TagHints();
     var attrHints = new AttrHints();
