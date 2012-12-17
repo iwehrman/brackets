@@ -71,21 +71,15 @@ define(function (require, exports, module) {
         
         // Ask provider for hints at current cursor position; expect it to return some
         function expectHints(provider) {
-            var query = provider.getQueryInfo(testEditor, testEditor.getCursorPos());
-            expect(query).toBeTruthy();
-            expect(query.queryStr).not.toBeNull();
-            
-            var hintList = provider.search(query);
-            expect(hintList).toBeTruthy();
-            
-            return hintList;
+            expect(provider.hasHints(testEditor, null)).toBe(true);
+            var hintsObj = provider.getHints();
+            expect(hintsObj).not.toBeNull();
+            return hintsObj.hints; // return just the array of hints
         }
         
         // Ask provider for hints at current cursor position; expect it NOT to return any
         function expectNoHints(provider) {
-            var query = provider.getQueryInfo(testEditor, testEditor.getCursorPos());
-            expect(query).toBeTruthy();
-            expect(query.queryStr).toBeNull();
+            expect(provider.hasHints(testEditor, null)).toBe(false);
         }
         
         // Expect hintList to contain tag names, starting with given value (if unspecified, expects the default unfilered list)
@@ -459,7 +453,7 @@ define(function (require, exports, module) {
             function selectHint(provider, expectedHint) {
                 var hintList = expectHints(provider);
                 expect(hintList.indexOf(expectedHint)).not.toBe(-1);
-                provider.handleSelect(expectedHint, testEditor, testEditor.getCursorPos(), true);
+                return provider.insertHint(expectedHint);
             }
             
             // Helper function for testing cursor position
@@ -476,12 +470,10 @@ define(function (require, exports, module) {
                 expectCursorAt({ line: 6, ch: 25 });            // cursor between the two "s
             });
             
-            it("should pop up attribute value hints after attribute name has been inserted", function () {
+            it("should make explicit request for new hints after attribute name has been inserted", function () {
                 testEditor.setCursorPos({ line: 6, ch: 18 });   // cursor between space and >
-                selectHint(HTMLCodeHints.attrHintProvider, "dir");
+                expect(selectHint(HTMLCodeHints.attrHintProvider, "dir")).toBe(true); // returning 'true' from insertHint (which is called by selectHint helper) initiates a new explicit hint request
                 expect(testDocument.getLine(6)).toBe("  <h3 id  = 'bar' dir=\"\">Subheading</h3>");
-                expect(CodeHintManager._getCodeHintList()).toBeTruthy();
-                expect(CodeHintManager._getCodeHintList().isOpen()).toBe(true);
             });
             
             it("should NOT insert =\"\" after valueless attribute", function () {
