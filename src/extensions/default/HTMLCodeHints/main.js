@@ -45,60 +45,56 @@ define(function (require, exports, module) {
      * @constructor
      */
     function TagHints() {}
-
-    /**
-     * Filters the source list by query and returns the result
-     * @param {Object.<queryStr: string, ...} query -- a query object with a required property queryStr 
-     *     that will be used to filter out code hints
-     * @return {Array.<string>}
-     */
-    TagHints.prototype.search = function (query) {
-        var result = $.map(tags, function (value, key) {
-            if (key.indexOf(query.queryStr) === 0) {
-                return key;
+    
+    TagHints.prototype.hasHints = function (editor, implicitChar) {
+        var tagInfo,
+            query;
+        
+        this.editor = editor;
+        if (implicitChar === null) {
+            tagInfo = HTMLUtils.getTagInfo(this.editor, this.editor.getCursorPos());
+            if (tagInfo.position.tokenType === HTMLUtils.TAG_NAME) {
+                if (tagInfo.position.offset >= 0) {
+                    return true;
+                }
             }
-        }).sort();
-
-        return result;
-        // TODO: better sorting. Should rank tags based on portion of query that is present in tag
+            return false;
+        } else {
+            return implicitChar === "<";
+        }
     };
-
-
-    /**
-     * Figures out the text to use for the hint list query based on the text
-     * around the cursor
-     * Query is the text from the start of a tag to the current cursor position
-     * @param {Editor} editor
-     * @param {Cursor} current cursor location
-     * @return {Object.<queryStr: string, ...} search query results will be filtered by.
-     *      Return empty queryStr string to indicate code hinting should not filter and show all results.
-     *      Return null in queryStr to indicate NO hints can be provided.
-     */
-    TagHints.prototype.getQueryInfo = function (editor, cursor) {
-        var tagInfo = HTMLUtils.getTagInfo(editor, cursor),
-            query = {queryStr: null};
+        
+    TagHints.prototype.getHints = function (implicitChar) {
+        var tagInfo = HTMLUtils.getTagInfo(this.editor, this.editor.getCursorPos()),
+            query,
+            result;
 
         if (tagInfo.position.tokenType === HTMLUtils.TAG_NAME) {
             if (tagInfo.position.offset >= 0) {
-                query.queryStr = tagInfo.tagName.slice(0, tagInfo.position.offset);
+                query = tagInfo.tagName.slice(0, tagInfo.position.offset);
+                result = $.map(tags, function (value, key) {
+                    if (key.indexOf(query) === 0) {
+                        return key;
+                    }
+                }).sort();
+                // TODO: better sorting. Should rank tags based on portion of query that is present in tag
+                
+                return {
+                    hints: result,
+                    match: query,
+                    selectInitial: true
+                };
             }
-
         }
-
-        return query;
+        
+        return null;
     };
-
-    /**
-     * Enters the code completion text into the editor
-     * @param {string} completion - text to insert into current code editor
-     * @param {Editor} editor
-     * @param {Cursor} current cursor location
-     * @return {boolean} true to close the hint list, false to keep the hint list open.
-     */
-    TagHints.prototype.handleSelect = function (completion, editor, cursor) {
+    
+    TagHints.prototype.insertHint = function (completion) {
         var start = {line: -1, ch: -1},
             end = {line: -1, ch: -1},
-            tagInfo = HTMLUtils.getTagInfo(editor, cursor),
+            cursor = this.editor.getCursorPos(),
+            tagInfo = HTMLUtils.getTagInfo(this.editor, cursor),
             charCount = 0;
 
         if (tagInfo.position.tokenType === HTMLUtils.TAG_NAME) {
@@ -111,69 +107,14 @@ define(function (require, exports, module) {
 
         if (completion !== tagInfo.tagName) {
             if (start.ch !== end.ch) {
-                editor.document.replaceRange(completion, start, end);
+                this.editor.document.replaceRange(completion, start, end);
             } else {
-                editor.document.replaceRange(completion, start);
+                this.editor.document.replaceRange(completion, start);
             }
         }
         
-        return true;
+        return false;
     };
-
-    /**
-     * Check whether to show hints on a specific key.
-     * @param {string} key -- the character for the key user just presses.
-     * @return {boolean} return true/false to indicate whether hinting should be triggered by this key.
-     */
-    TagHints.prototype.shouldShowHintsOnKey = function (key) {
-        return key === "<";
-    };
-
-    /**
-     * Check whether to select the first item in the list by default
-     * @return {boolean} return true to highlight the first item.
-     */
-    TagHints.prototype.wantInitialSelection = function () {
-        return true;
-    };
-    
-    function hasHints(editor, key) {
-        this.editor = editor;
-        if (!key) {
-            var query = this.getQueryInfo(editor, editor.getCursorPos());
-            return (query.queryStr !== null);
-        } else {
-            return this.shouldShowHintsOnKey(key);
-        }
-    }
-    
-    function getHints(key) {
-        var query = this.getQueryInfo(this.editor, this.editor.getCursorPos());
-        var tags = this.search(query);
-        return {
-            hints: tags,
-            match: query.queryStr,
-            selectInitial: this.wantInitialSelection()
-        };
-    }
-    
-    function insertHint(hint) {
-        return !(this.handleSelect(hint, this.editor, this.editor.getCursorPos()));
-    }
-    
-    // --- START HACK --- 
-    TagHints.prototype.hasHints = function (editor, key) {
-        return hasHints.apply(this, [editor, key]);
-    };
-        
-    TagHints.prototype.getHints = function (key) {
-        return getHints.apply(this, [key]);
-    };
-    
-    TagHints.prototype.insertHint = function (hint) {
-        return insertHint.apply(this, [hint]);
-    };
-    // --- END HACK --- 
 
     /**
      * @constructor
@@ -198,126 +139,6 @@ define(function (require, exports, module) {
                 return key;
             }
         });
-    };
-
-    /**
-     * Enters the code completion text into the editor
-     * @param {string} completion - text to insert into current code editor
-     * @param {Editor} editor
-     * @param {Cursor} current cursor location
-     * @return {boolean} true to close the hint list, false to keep the hint list open.
-     */
-    AttrHints.prototype.handleSelect = function (completion, editor, cursor) {
-        var start = {line: -1, ch: -1},
-            end = {line: -1, ch: -1},
-            tagInfo = HTMLUtils.getTagInfo(editor, cursor),
-            tokenType = tagInfo.position.tokenType,
-            charCount = 0,
-            insertedName = false,
-            replaceExistingOne = tagInfo.attr.valueAssigned,
-            endQuote = "",
-            shouldReplace = true;
-
-        if (tokenType === HTMLUtils.ATTR_NAME) {
-            charCount = tagInfo.attr.name.length;
-            // Append an equal sign and two double quotes if the current attr is not an empty attr
-            // and then adjust cursor location before the last quote that we just inserted.
-            if (!replaceExistingOne && attributes && attributes[completion] &&
-                    attributes[completion].type !== "flag") {
-                completion += "=\"\"";
-                insertedName = true;
-            } else if (completion === tagInfo.attr.name) {
-                shouldReplace = false;
-            }
-        } else if (tokenType === HTMLUtils.ATTR_VALUE) {
-            charCount = tagInfo.attr.value.length;
-            
-            // Special handling for URL hinting -- if the completion is a file name
-            // and not a folder, then close the code hint list.
-            if (!this.closeOnSelect && completion.match(/\/$/) === null) {
-                this.closeOnSelect = true;
-            }
-            
-            if (!tagInfo.attr.hasEndQuote) {
-                endQuote = tagInfo.attr.quoteChar;
-                if (endQuote) {
-                    completion += endQuote;
-                } else if (tagInfo.position.offset === 0) {
-                    completion = "\"" + completion + "\"";
-                }
-            } else if (completion === tagInfo.attr.value) {
-                shouldReplace = false;
-            }
-        }
-
-        end.line = start.line = cursor.line;
-        start.ch = cursor.ch - tagInfo.position.offset;
-        end.ch = start.ch + charCount;
-
-        if (shouldReplace) {
-            if (start.ch !== end.ch) {
-                editor.document.replaceRange(completion, start, end);
-            } else {
-                editor.document.replaceRange(completion, start);
-            }
-        }
-
-        if (!this.closeOnSelect) {
-            return false;
-        }
-        
-        if (insertedName) {
-            editor.setCursorPos(start.line, start.ch + completion.length - 1);
-
-            // Since we're now inside the double-quotes we just inserted,
-            // immediately pop up the attribute value hint.
-            return false;
-            // CodeHintManager.showHint(editor);
-        } else if (tokenType === HTMLUtils.ATTR_VALUE && tagInfo.attr.hasEndQuote) {
-            // Move the cursor to the right of the existing end quote after value insertion.
-            editor.setCursorPos(start.line, start.ch + completion.length + 1);
-        }
-        
-        return true;
-    };
-
-    /**
-     * Figures out the text to use for the hint list query based on the text
-     * around the cursor
-     * Query is the text from the start of an attribute to the current cursor position
-     * @param {Editor} editor
-     * @param {Cursor} current cursor location
-     * @return {Object.<queryStr: string, ...} search query results will be filtered by.
-     *      Return empty queryStr string to indicate code hinting should not filter and show all results.
-     *      Return null in queryStr to indicate NO hints can be provided.
-     */
-    AttrHints.prototype.getQueryInfo = function (editor, cursor) {
-        var tagInfo = HTMLUtils.getTagInfo(editor, cursor),
-            query = {queryStr: null},
-            tokenType = tagInfo.position.tokenType;
- 
-        if (tokenType === HTMLUtils.ATTR_NAME || tokenType === HTMLUtils.ATTR_VALUE) {
-            query.tag = tagInfo.tagName;
-            
-            if (tagInfo.position.offset >= 0) {
-                if (tokenType === HTMLUtils.ATTR_NAME) {
-                    query.queryStr = tagInfo.attr.name.slice(0, tagInfo.position.offset);
-                } else {
-                    query.queryStr = tagInfo.attr.value.slice(0, tagInfo.position.offset);
-                    query.attrName = tagInfo.attr.name;
-                }
-            } else if (tokenType === HTMLUtils.ATTR_VALUE) {
-                // We get negative offset for a quoted attribute value with some leading whitespaces 
-                // as in <a rel= "rtl" where the cursor is just to the right of the "=".
-                // So just set the queryStr to an empty string. 
-                query.queryStr = "";
-                query.attrName = tagInfo.attr.name;
-            }
-
-            query.usedAttr = HTMLUtils.getTagAttributes(editor, cursor);
-        }
-
-        return query;
     };
 
     /**
@@ -422,12 +243,6 @@ define(function (require, exports, module) {
                     self.cachedHints.query      = query;
                     self.cachedHints.queryDir   = queryDir;
                     self.cachedHints.docDir     = docDir;
-
-                    // If the editor has not changed, then re-initiate code hints. Cached data
-                    // is still valid for folder even if we're not going to show it now.
-                    if (origEditor === EditorManager.getFocusedEditor()) {
-                        CodeHintManager.showHint(origEditor);
-                    }
                 });
             });
 
@@ -457,15 +272,66 @@ define(function (require, exports, module) {
         return result;
     };
 
-    /**
-     * Create a complete list of attributes for the tag in the query. Then filter 
-     * the list by attrName in the query and return the result.
-     * @param {Object.<queryStr: string, ...} query -- a query object with a required property queryStr 
-     *     that will be used to filter out code hints
-     * @return {Array.<string>}
-     */
-    AttrHints.prototype.search = function (query) {
-        var result = [];
+    AttrHints.prototype.hasHints = function (editor, implicitChar) {
+        var tagInfo,
+            query,
+            tokenType;
+        
+        this.editor = editor;
+        if (implicitChar === null) {
+            tagInfo = HTMLUtils.getTagInfo(editor, editor.getCursorPos());
+            query = null;
+            tokenType = tagInfo.position.tokenType;
+ 
+            if (tokenType === HTMLUtils.ATTR_NAME || tokenType === HTMLUtils.ATTR_VALUE) {
+                if (tagInfo.position.offset >= 0) {
+                    if (tokenType === HTMLUtils.ATTR_NAME) {
+                        query = tagInfo.attr.name.slice(0, tagInfo.position.offset);
+                    } else {
+                        query = tagInfo.attr.value.slice(0, tagInfo.position.offset);
+                    }
+                } else if (tokenType === HTMLUtils.ATTR_VALUE) {
+                    // We get negative offset for a quoted attribute value with some leading whitespaces 
+                    // as in <a rel= "rtl" where the cursor is just to the right of the "=".
+                    // So just set the queryStr to an empty string. 
+                    query = "";
+                }
+            }
+
+            return query !== null;
+        } else {
+            return (implicitChar === " " || implicitChar === "'" ||
+                implicitChar === "\"" || implicitChar === "=");
+        }
+    };
+        
+    AttrHints.prototype.getHints = function (implicitChar) {
+        var cursor = this.editor.getCursorPos(),
+            tagInfo = HTMLUtils.getTagInfo(this.editor, cursor),
+            query = {queryStr: null},
+            tokenType = tagInfo.position.tokenType,
+            result = [];
+ 
+        if (tokenType === HTMLUtils.ATTR_NAME || tokenType === HTMLUtils.ATTR_VALUE) {
+            query.tag = tagInfo.tagName;
+            
+            if (tagInfo.position.offset >= 0) {
+                if (tokenType === HTMLUtils.ATTR_NAME) {
+                    query.queryStr = tagInfo.attr.name.slice(0, tagInfo.position.offset);
+                } else {
+                    query.queryStr = tagInfo.attr.value.slice(0, tagInfo.position.offset);
+                    query.attrName = tagInfo.attr.name;
+                }
+            } else if (tokenType === HTMLUtils.ATTR_VALUE) {
+                // We get negative offset for a quoted attribute value with some leading whitespaces 
+                // as in <a rel= "rtl" where the cursor is just to the right of the "=".
+                // So just set the queryStr to an empty string. 
+                query.queryStr = "";
+                query.attrName = tagInfo.attr.name;
+            }
+
+            query.usedAttr = HTMLUtils.getTagAttributes(this.editor, cursor);
+        }
 
         if (query.tag && query.queryStr !== null) {
             var tagName = query.tag,
@@ -515,39 +381,87 @@ define(function (require, exports, module) {
             }
         }
 
-        return result;
-    };
-
-    /**
-     * Check whether to show hints on a specific key.
-     * @param {string} key -- the character for the key user just presses.
-     * @return {boolean} return true/false to indicate whether hinting should be triggered by this key.
-     */
-    AttrHints.prototype.shouldShowHintsOnKey = function (key) {
-        return (key === " " || key === "'" || key === "\"" || key === "=");
-    };
-
-    /**
-     * Check whether to select the first item in the list by default
-     * @return {boolean} return true to highlight the first item.
-     */
-    AttrHints.prototype.wantInitialSelection = function () {
-        return true;
+        return {
+            hints: result,
+            match: query.queryStr,
+            selectInitial: true
+        };
     };
     
-    // --- START HACK --- 
-    AttrHints.prototype.hasHints = function (editor, key) {
-        return hasHints.apply(this, [editor, key]);
-    };
+    
+    AttrHints.prototype.insertHint = function (completion) {
+        var cursor = this.editor.getCursorPos(),
+            start = {line: -1, ch: -1},
+            end = {line: -1, ch: -1},
+            tagInfo = HTMLUtils.getTagInfo(this.editor, cursor),
+            tokenType = tagInfo.position.tokenType,
+            charCount = 0,
+            insertedName = false,
+            replaceExistingOne = tagInfo.attr.valueAssigned,
+            endQuote = "",
+            shouldReplace = true;
+
+        if (tokenType === HTMLUtils.ATTR_NAME) {
+            charCount = tagInfo.attr.name.length;
+            // Append an equal sign and two double quotes if the current attr is not an empty attr
+            // and then adjust cursor location before the last quote that we just inserted.
+            if (!replaceExistingOne && attributes && attributes[completion] &&
+                    attributes[completion].type !== "flag") {
+                completion += "=\"\"";
+                insertedName = true;
+            } else if (completion === tagInfo.attr.name) {
+                shouldReplace = false;
+            }
+        } else if (tokenType === HTMLUtils.ATTR_VALUE) {
+            charCount = tagInfo.attr.value.length;
+            
+            // Special handling for URL hinting -- if the completion is a file name
+            // and not a folder, then close the code hint list.
+            if (!this.closeOnSelect && completion.match(/\/$/) === null) {
+                this.closeOnSelect = true;
+            }
+            
+            if (!tagInfo.attr.hasEndQuote) {
+                endQuote = tagInfo.attr.quoteChar;
+                if (endQuote) {
+                    completion += endQuote;
+                } else if (tagInfo.position.offset === 0) {
+                    completion = "\"" + completion + "\"";
+                }
+            } else if (completion === tagInfo.attr.value) {
+                shouldReplace = false;
+            }
+        }
+
+        end.line = start.line = cursor.line;
+        start.ch = cursor.ch - tagInfo.position.offset;
+        end.ch = start.ch + charCount;
+
+        if (shouldReplace) {
+            if (start.ch !== end.ch) {
+                this.editor.document.replaceRange(completion, start, end);
+            } else {
+                this.editor.document.replaceRange(completion, start);
+            }
+        }
+
+        if (!this.closeOnSelect) {
+            return true;
+        }
         
-    AttrHints.prototype.getHints = function (key) {
-        return getHints.apply(this, [key]);
+        if (insertedName) {
+            this.editor.setCursorPos(start.line, start.ch + completion.length - 1);
+
+            // Since we're now inside the double-quotes we just inserted,
+            // immediately pop up the attribute value hint.
+            return true;
+        } else if (tokenType === HTMLUtils.ATTR_VALUE && tagInfo.attr.hasEndQuote) {
+            // Move the cursor to the right of the existing end quote after value insertion.
+            this.editor.setCursorPos(start.line, start.ch + completion.length + 1);
+        }
+        
+        return false;
     };
-    
-    AttrHints.prototype.insertHint = function (hint) {
-        return insertHint.apply(this, [hint]);
-    };
-    // --- END HACK --- 
 
     var tagHints = new TagHints();
     var attrHints = new AttrHints();
