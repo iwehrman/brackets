@@ -21,7 +21,6 @@
  * 
  */
 
-
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 /*global define, $, window, brackets */
 
@@ -63,6 +62,7 @@ define(function (require, exports, module) {
     }
 
     /**
+     * @private
      * Adds a single item to the hint list
      * @param {string} name
      */
@@ -84,8 +84,41 @@ define(function (require, exports, module) {
         this.$hintMenu.find("ul.dropdown-menu")
             .append($item);
     };
+    
+    /**
+     * @private
+     * Selects the item in the hint list specified by index
+     * @param {number} index
+     */
+    CodeHintList.prototype._setSelectedIndex = function (index) {
+
+        console.log("_setSelectedIndex: " + index);
+
+        var items = this.$hintMenu.find("li");
+        
+        // Range check
+        // index = Math.max(0, Math.min(index, items.length - 1));
+        index = Math.min(index, items.length - 1);
+        
+        // Clear old highlight
+        if (this.selectedIndex !== -1) {
+            $(items[this.selectedIndex]).find("a").removeClass("highlight");
+        }
+        
+        // Highlight the new selected item
+        this.selectedIndex = index;
+
+        if (this.selectedIndex !== -1) {
+            var $item = $(items[this.selectedIndex]);
+            var $view = this.$hintMenu.find("ul.dropdown-menu");
+
+            ViewUtils.scrollElementIntoView($view, $item, false);
+            $item.find("a").addClass("highlight");
+        }
+    };
             
     /**
+     * @private
      * Rebuilds the list items for the hint list based on this.displayList
      */
     CodeHintList.prototype._buildListView = function () {
@@ -109,35 +142,58 @@ define(function (require, exports, module) {
         }
     };
 
+    /**
+     * @private
+     * Computes top left location for hint list so that the list is not clipped by the window
+     * @return {Object.<left: number, top: number> }
+     */
+    CodeHintList.prototype._calcHintListLocation = function () {
+        var cursor = this.editor._codeMirror.cursorCoords(),
+            posTop  = cursor.y,
+            posLeft = cursor.x,
+            $window = $(window),
+            $menuWindow = this.$hintMenu.children("ul");
+
+        // TODO Ty: factor out menu repositioning logic so code hints and Context menus share code
+        // adjust positioning so menu is not clipped off bottom or right
+        var bottomOverhang = posTop + 25 + $menuWindow.height() - $window.height();
+        if (bottomOverhang > 0) {
+            posTop -= (27 + $menuWindow.height());
+        }
+        // todo: should be shifted by line height
+        posTop -= 15;   // shift top for hidden parent element
+        //posLeft += 5;
+
+        var rightOverhang = posLeft + $menuWindow.width() - $window.width();
+        if (rightOverhang > 0) {
+            posLeft = Math.max(0, posLeft - rightOverhang);
+        }
+
+        return {left: posLeft, top: posTop};
+    };
 
     /**
-     * Selects the item in the hint list specified by index
-     * @param {number} index
+     * @private
+     * Calculate the number of items per scroll page. Used for PageUp and PageDown.
+     * @return {number}
      */
-    CodeHintList.prototype._setSelectedIndex = function (index) {
-        var items = this.$hintMenu.find("li");
-        
-        // Range check
-        // index = Math.max(0, Math.min(index, items.length - 1));
-        index = Math.min(index, items.length - 1);
-        
-        // Clear old highlight
-        if (this.selectedIndex !== -1) {
-            $(items[this.selectedIndex]).find("a").removeClass("highlight");
-        }
-        
-        // Highlight the new selected item
-        this.selectedIndex = index;
+    CodeHintList.prototype._getItemsPerPage = function () {
+        var itemsPerPage = 1,
+            $items = this.$hintMenu.find("li"),
+            $view = this.$hintMenu.find("ul.dropdown-menu"),
+            itemHeight;
 
-        if (this.selectedIndex !== -1) {
-            var $item = $(items[this.selectedIndex]);
-            var $view = this.$hintMenu.find("ul.dropdown-menu");
-
-            ViewUtils.scrollElementIntoView($view, $item, false);
-            $item.find("a").addClass("highlight");
+        if ($items.length !== 0) {
+            itemHeight = $($items[0]).height();
+            if (itemHeight) {
+                // round down to integer value
+                itemsPerPage = Math.floor($view.height() / itemHeight);
+                itemsPerPage = Math.max(1, Math.min(itemsPerPage, $items.length));
+            }
         }
+
+        return itemsPerPage;
     };
-    
     
     /**
      * Handles key presses when the hint list is being displayed
@@ -145,52 +201,60 @@ define(function (require, exports, module) {
      * @param {KeyBoardEvent} keyEvent
      */
     CodeHintList.prototype.handleKeyEvent = function (event) {
-        var keyCode = event.keyCode;
+        var keyCode,
+            self = this;
         
-        // Up arrow, down arrow and enter key are always handled here
-        if (event.type !== "keypress") {
-            // If we don't have a selection in the list, then just update the list and
-            // show it at the new location for Return and Tab keys.
-            if (this.selectedIndex === -1 &&
-                    (keyCode === KeyEvent.DOM_VK_RETURN || keyCode === KeyEvent.DOM_VK_TAB)) {
-                // this.handleClose();
-                return;
-            }
-            
-            if (keyCode === KeyEvent.DOM_VK_RETURN || keyCode === KeyEvent.DOM_VK_TAB ||
-                    keyCode === KeyEvent.DOM_VK_UP || keyCode === KeyEvent.DOM_VK_DOWN ||
-                    keyCode === KeyEvent.DOM_VK_PAGE_UP || keyCode === KeyEvent.DOM_VK_PAGE_DOWN) {
-
-                if (event.type === "keydown") {
-                    if (keyCode === KeyEvent.DOM_VK_UP) {
-                        // Up arrow
-                        this._setSelectedIndex(this.selectedIndex - 1);
-                    } else if (keyCode === KeyEvent.DOM_VK_DOWN) {
-                        // Down arrow
-                        this._setSelectedIndex(this.selectedIndex + 1);
-                    } else if (keyCode === KeyEvent.DOM_VK_PAGE_UP) {
-                        // Page Up
-                        this._setSelectedIndex(this.selectedIndex - this._getItemsPerPage());
-                    } else if (keyCode === KeyEvent.DOM_VK_PAGE_DOWN) {
-                        // Page Down
-                        this._setSelectedIndex(this.selectedIndex + this._getItemsPerPage());
-                    } else {
-                        // Enter/return key or Tab key
-                        // Trigger a click handler to commmit the selected item
-                        $(this.$hintMenu.find("li")[this.selectedIndex]).triggerHandler("click");
-                    }
-                }
-
-                event.preventDefault();
-                return;
+        function _upSelection() {
+            if (self.selectedIndex > 0) {
+                self._setSelectedIndex(self.selectedIndex - 1);
             }
         }
         
-        // All other key events trigger a rebuild of the list, but only
-        // on keyup events
-        // if (event.type === "keyup") {
-        //     this._buildListView();
-        // }
+        function _downSelection() {
+            if (self.selectedIndex < (self.displayList.length - 1)) {
+                self._setSelectedIndex(self.selectedIndex + 1);
+            }
+        }
+        
+        function _pageUpSelection() {
+            var index;
+            if (self.selectedIndex > 0) {
+                index = self.selectedIndex - self._getItemsPerPage();
+                self._setSelectedIndex(Math.max(index, 0));
+            }
+        }
+        
+        function _pageDownSelection() {
+            var index;
+            if (self.selectedIndex < (self.displayList.length - 1)) {
+                index = self.selectedIndex + self._getItemsPerPage();
+                self._setSelectedIndex(Math.min(index, (self.displayList.length - 1)));
+            }
+        }
+
+        // (page) up, (page) down, enter and tab key are handled by the list
+        if (event.type === "keydown") {
+            keyCode = event.keyCode;
+
+            if (keyCode === KeyEvent.DOM_VK_UP) {
+                _upSelection.call(this);
+            } else if (keyCode === KeyEvent.DOM_VK_DOWN) {
+                _downSelection.call(this);
+            } else if (keyCode === KeyEvent.DOM_VK_PAGE_UP) {
+                _pageUpSelection.call(this);
+            } else if (keyCode === KeyEvent.DOM_VK_PAGE_DOWN) {
+                _pageDownSelection.call(this);
+            } else if (this.selectedIndex !== -1 &&
+                    (keyCode === KeyEvent.DOM_VK_RETURN || keyCode === KeyEvent.DOM_VK_TAB)) {
+                // Trigger a click handler to commmit the selected item
+                $(this.$hintMenu.find("li")[this.selectedIndex]).triggerHandler("click");
+            } else {
+                // only prevent default handler wshen the list handles the event
+                return;
+            }
+            
+            event.preventDefault();
+        }
     };
 
     /**
@@ -274,58 +338,6 @@ define(function (require, exports, module) {
         this.$hintMenu.remove();
     };
         
-    /**
-     * Computes top left location for hint list so that the list is not clipped by the window
-     * @return {Object.<left: number, top: number> }
-     */
-    CodeHintList.prototype._calcHintListLocation = function () {
-        var cursor = this.editor._codeMirror.cursorCoords(),
-            posTop  = cursor.y,
-            posLeft = cursor.x,
-            $window = $(window),
-            $menuWindow = this.$hintMenu.children("ul");
-
-        // TODO Ty: factor out menu repositioning logic so code hints and Context menus share code
-        // adjust positioning so menu is not clipped off bottom or right
-        var bottomOverhang = posTop + 25 + $menuWindow.height() - $window.height();
-        if (bottomOverhang > 0) {
-            posTop -= (27 + $menuWindow.height());
-        }
-        // todo: should be shifted by line height
-        posTop -= 15;   // shift top for hidden parent element
-        //posLeft += 5;
-
-        var rightOverhang = posLeft + $menuWindow.width() - $window.width();
-        if (rightOverhang > 0) {
-            posLeft = Math.max(0, posLeft - rightOverhang);
-        }
-
-        return {left: posLeft, top: posTop};
-    };
-
-    /**
-     * @private
-     * Calculate the number of items per scroll page. Used for PageUp and PageDown.
-     * @return {number}
-     */
-    CodeHintList.prototype._getItemsPerPage = function () {
-        var itemsPerPage = 1,
-            $items = this.$hintMenu.find("li"),
-            $view = this.$hintMenu.find("ul.dropdown-menu"),
-            itemHeight;
-
-        if ($items.length !== 0) {
-            itemHeight = $($items[0]).height();
-            if (itemHeight) {
-                // round down to integer value
-                itemsPerPage = Math.floor($view.height() / itemHeight);
-                itemsPerPage = Math.max(1, Math.min(itemsPerPage, $items.length));
-            }
-        }
-
-        return itemsPerPage;
-    };
-    
     CodeHintList.prototype.onSelect = function (callback) {
         this.handleSelect = callback;
     };

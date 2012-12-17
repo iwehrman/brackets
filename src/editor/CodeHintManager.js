@@ -235,6 +235,11 @@ define(function (require, exports, module) {
                 lastChar = null;
                 console.log("New explicit session");
                 _beginSession(editor);
+            } else {
+                // Pass to the hint list, if it's open
+                if (hintList && hintList.isOpen()) {
+                    hintList.handleKeyEvent(event);
+                }
             }
         } else if (event.type === "keypress") {
             console.log("keypress: " + event.charCode);
@@ -248,11 +253,6 @@ define(function (require, exports, module) {
                     _updateHintList();
                 }
             }
-        }
-
-        // Pass to the hint list, if it's open
-        if (hintList && hintList.isOpen()) {
-            hintList.handleKeyEvent(event);
         }
     }
     
