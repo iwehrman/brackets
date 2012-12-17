@@ -150,10 +150,11 @@ define(function (require, exports, module) {
     function getHints(key) {
         var query = this.getQueryInfo(this.editor, this.editor.getCursorPos());
         var tags = this.search(query);
-        return { 
-            hints: tags, 
-            match: query.queryStr, 
-            selectInitial: this.wantInitialSelection() };
+        return {
+            hints: tags,
+            match: query.queryStr,
+            selectInitial: this.wantInitialSelection()
+        };
     }
     
     function insertHint(hint) {
@@ -170,7 +171,7 @@ define(function (require, exports, module) {
     };
     
     TagHints.prototype.insertHint = function (hint) {
-        return insertHint.apply(this, [hint])
+        return insertHint.apply(this, [hint]);
     };
     // --- END HACK --- 
 
@@ -544,7 +545,7 @@ define(function (require, exports, module) {
     };
     
     AttrHints.prototype.insertHint = function (hint) {
-        return insertHint.apply(this, [hint])
+        return insertHint.apply(this, [hint]);
     };
     // --- END HACK --- 
 

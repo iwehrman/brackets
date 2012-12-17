@@ -151,7 +151,7 @@ define(function (require, exports, module) {
         if (event.type !== "keypress") {
             // If we don't have a selection in the list, then just update the list and
             // show it at the new location for Return and Tab keys.
-            if (this.selectedIndex === -1 && 
+            if (this.selectedIndex === -1 &&
                     (keyCode === KeyEvent.DOM_VK_RETURN || keyCode === KeyEvent.DOM_VK_TAB)) {
                 // this.handleClose();
                 return;
@@ -247,7 +247,7 @@ define(function (require, exports, module) {
         console.log("HintList.update");
 
         this.query = {queryStr: response.match};
-        this.displayList = response.hints; 
+        this.displayList = response.hints;
         this.initialSelect = response.selectInitial;
 
         this._buildListView();
@@ -336,5 +336,5 @@ define(function (require, exports, module) {
 
 
     // Define public API
-    exports.CodeHintList = CodeHintList; 
+    exports.CodeHintList = CodeHintList;
 });
