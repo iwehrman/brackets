@@ -261,16 +261,10 @@ define(function (require, exports, module) {
      * End the current hinting session
      */
     function _endSession() {
-        console.log("_endSession");
-
         hintList.close();
         hintList = null;
         sessionProvider = null;
         sessionEditor = null;
-
-        if (lastChar !== null) {
-            throw "lastChar is not null at session end!";
-        }
     }
    
     /** 
@@ -283,6 +277,7 @@ define(function (require, exports, module) {
             if (sessionEditor === editor) {
                 return true;
             } else {
+                // the editor has changed
                 _endSession();
             }
         }
@@ -294,14 +289,14 @@ define(function (require, exports, module) {
      * render the hint list window.
      */
     function _updateHintList() {
-        console.log("_updateHintList");
-
         var response = sessionProvider.getHints(lastChar);
         lastChar = null;
-
+        
         if (!response) {
+            // the provider wishes to close the session
             _endSession();
         } else if (hintList.isOpen()) {
+            // the session is open 
             hintList.update(response);
         } else {
             hintList.open(response);
@@ -313,8 +308,6 @@ define(function (require, exports, module) {
      * @param {Editor} editor
      */
     function _beginSession(editor) {
-        console.log("_beginSession");
-
         // Find a suitable provider, if any
         var mode = editor.getModeForSelection(),
             enabledProviders = _getProvidersForMode(mode);
@@ -360,25 +353,23 @@ define(function (require, exports, module) {
                 if (_inSession(editor)) {
                     _endSession();
                 }
-                console.log("New explicit session");
+                // Begin a new explicit session
                 _beginSession(editor);
-            } else {
-                // Pass to the hint list, if it's open
-                if (hintList && hintList.isOpen()) {
-                    hintList.handleKeyEvent(event);
-                }
+            } else if (hintList && hintList.isOpen()) {
+                // Pass event to the hint list, if it's open
+                hintList.handleKeyEvent(event);
             }
         } else if (event.type === "keypress") {
-            console.log("keypress: " + event.charCode);
+            // Last inserted character, used later by handleChange
             lastChar = String.fromCharCode(event.charCode);
         } else if (event.type === "keyup") {
             if (_inSession(editor)) {
                 if (event.keyCode !== 32 && event.ctrlKey) {
-                    // End the session on commands non-simple navigation commands.
-                    
+                    // End the session on non-simple navigation commands.
                     _endSession();
                 } else if (event.keyCode === KeyEvent.DOM_VK_LEFT ||
                         event.keyCode === KeyEvent.DOM_VK_RIGHT) {
+                    // Update the list after a simple navigation
                     _updateHintList();
                 }
             }
@@ -392,7 +383,6 @@ define(function (require, exports, module) {
      */
     function handleChange(editor) {
         if (!_inSession(editor) && lastChar) {
-            console.log("New implicit session: " + lastChar);
             _beginSession(editor);
         } else if (_inSession(editor)) {
             _updateHintList();
