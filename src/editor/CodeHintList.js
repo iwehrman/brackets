@@ -91,14 +91,10 @@ define(function (require, exports, module) {
      * @param {number} index
      */
     CodeHintList.prototype._setSelectedIndex = function (index) {
-
-        console.log("_setSelectedIndex: " + index);
-
         var items = this.$hintMenu.find("li");
         
         // Range check
-        // index = Math.max(0, Math.min(index, items.length - 1));
-        index = Math.min(index, items.length - 1);
+        index = Math.max(-1, Math.min(index, items.length - 1));
         
         // Clear old highlight
         if (this.selectedIndex !== -1) {
@@ -122,7 +118,6 @@ define(function (require, exports, module) {
      * Rebuilds the list items for the hint list based on this.displayList
      */
     CodeHintList.prototype._buildListView = function () {
-        
         var self = this;
 
         // clear the list 
@@ -140,6 +135,29 @@ define(function (require, exports, module) {
         } else {
             this._setSelectedIndex(this.initialSelect ? 0 : -1);
         }
+    };
+
+    /**
+     * @private
+     * Calculate the number of items per scroll page. Used for PageUp and PageDown.
+     * @return {number}
+     */
+    CodeHintList.prototype._getItemsPerPage = function () {
+        var itemsPerPage = 1,
+            $items = this.$hintMenu.find("li"),
+            $view = this.$hintMenu.find("ul.dropdown-menu"),
+            itemHeight;
+
+        if ($items.length !== 0) {
+            itemHeight = $($items[0]).height();
+            if (itemHeight) {
+                // round down to integer value
+                itemsPerPage = Math.floor($view.height() / itemHeight);
+                itemsPerPage = Math.max(1, Math.min(itemsPerPage, $items.length));
+            }
+        }
+
+        return itemsPerPage;
     };
 
     /**
@@ -170,29 +188,6 @@ define(function (require, exports, module) {
         }
 
         return {left: posLeft, top: posTop};
-    };
-
-    /**
-     * @private
-     * Calculate the number of items per scroll page. Used for PageUp and PageDown.
-     * @return {number}
-     */
-    CodeHintList.prototype._getItemsPerPage = function () {
-        var itemsPerPage = 1,
-            $items = this.$hintMenu.find("li"),
-            $view = this.$hintMenu.find("ul.dropdown-menu"),
-            itemHeight;
-
-        if ($items.length !== 0) {
-            itemHeight = $($items[0]).height();
-            if (itemHeight) {
-                // round down to integer value
-                itemsPerPage = Math.floor($view.height() / itemHeight);
-                itemsPerPage = Math.max(1, Math.min(itemsPerPage, $items.length));
-            }
-        }
-
-        return itemsPerPage;
     };
     
     /**
@@ -277,11 +272,6 @@ define(function (require, exports, module) {
      * @param {Editor} editor
      */
     CodeHintList.prototype.open = function (response) {
-        
-
-        console.log("HintList.open");
-
-        var self = this;
         this.query = {queryStr: response.match};
         this.displayList = response.hints;
         this.initialSelect = response.selectInitial;
@@ -299,7 +289,7 @@ define(function (require, exports, module) {
                 .css({"left": hintPos.left, "top": hintPos.top});
             this.opened = true;
             
-            PopUpManager.addPopUp(this.$hintMenu, self.handleClose, true);
+            PopUpManager.addPopUp(this.$hintMenu, this.handleClose, true);
         }
     };
 
@@ -307,9 +297,6 @@ define(function (require, exports, module) {
      * Gets the new query from the current provider and rebuilds the hint list based on the new one.
      */
     CodeHintList.prototype.update = function (response) {
-
-        console.log("HintList.update");
-
         this.query = {queryStr: response.match};
         this.displayList = response.hints;
         this.initialSelect = response.selectInitial;
@@ -327,10 +314,6 @@ define(function (require, exports, module) {
      * Closes the hint list
      */
     CodeHintList.prototype.close = function () {
-        // TODO: Due to #1381, this won't get called if the user clicks out of the code hint menu.
-        // That's (sort of) okay right now since it doesn't really matter if a single old invisible
-        // code hint list is lying around (it'll get closed the next time the user pops up a code
-        // hint). Once #1381 is fixed this issue should go away.
         this.$hintMenu.removeClass("open");
         this.opened = false;
         
@@ -343,6 +326,11 @@ define(function (require, exports, module) {
     };
 
     CodeHintList.prototype.onClose = function (callback) {
+        // TODO: Due to #1381, this won't get called if the user clicks out of
+        // the code hint menu. That's (sort of) okay right now since it doesn't
+        // really matter if a single old invisible code hint list is lying 
+        // around (it'll get closed the next time the user pops up a code 
+        // hint). Once #1381 is fixed this issue should go away.
         this.handleClose = callback;
     };
 
