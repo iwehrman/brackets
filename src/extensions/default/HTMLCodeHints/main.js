@@ -46,6 +46,23 @@ define(function (require, exports, module) {
      */
     function TagHints() {}
     
+    /**
+     * Determines whether HTML tag hints are available in the current editor
+     * context.
+     * 
+     * @param {Editor} editor 
+     * A non-null editor object for the active window.
+     *
+     * @param {String} implicitChar 
+     * Either null, if the hinting request was explicit, or a single character
+     * that represents the last insertion and that indicates an implicit
+     * hinting request.
+     *
+     * @return {Boolean} 
+     * Determines whether the current provider is able to provide hints for
+     * the given editor context and, in case implicitChar is non- null,
+     * whether it is appropriate to do so.
+     */
     TagHints.prototype.hasHints = function (editor, implicitChar) {
         var tagInfo,
             query;
@@ -63,7 +80,20 @@ define(function (require, exports, module) {
             return implicitChar === "<";
         }
     };
-        
+       
+    /**
+     * Returns a list of availble HTML tag hints if possible for the current
+     * editor context. 
+     *
+     * @return {Object<hints: Array<(String + jQuery.Obj)>, match: String, 
+     *      selectInitial: Boolean>}
+     * Null if the provider wishes to end the hinting session. Otherwise, a
+     * response object that provides 1. a sorted array hints that consists 
+     * of strings; 2. a string match that is used by the manager to emphasize
+     * matching substrings when rendering the hint list; and 3. a boolean that
+     * indicates whether the first result, if one exists, should be selected
+     * by default in the hint list window.
+     */
     TagHints.prototype.getHints = function (implicitChar) {
         var tagInfo = HTMLUtils.getTagInfo(this.editor, this.editor.getCursorPos()),
             query,
@@ -90,6 +120,16 @@ define(function (require, exports, module) {
         return null;
     };
     
+    /**
+     * Inserts a given HTML tag hint into the current editor context. 
+     * 
+     * @param {String} hint 
+     * The hint to be inserted into the editor context.
+     * 
+     * @return {Boolean} 
+     * Indicates whether the manager should follow hint insertion with an
+     * additional explicit hint request.
+     */
     TagHints.prototype.insertHint = function (completion) {
         var start = {line: -1, ch: -1},
             end = {line: -1, ch: -1},
@@ -272,6 +312,23 @@ define(function (require, exports, module) {
         return result;
     };
 
+    /**
+     * Determines whether HTML attribute hints are available in the current 
+     * editor context.
+     * 
+     * @param {Editor} editor 
+     * A non-null editor object for the active window.
+     *
+     * @param {String} implicitChar 
+     * Either null, if the hinting request was explicit, or a single character
+     * that represents the last insertion and that indicates an implicit
+     * hinting request.
+     *
+     * @return {Boolean} 
+     * Determines whether the current provider is able to provide hints for
+     * the given editor context and, in case implicitChar is non-null,
+     * whether it is appropriate to do so.
+     */
     AttrHints.prototype.hasHints = function (editor, implicitChar) {
         var tagInfo,
             query,
@@ -304,7 +361,20 @@ define(function (require, exports, module) {
                 implicitChar === "\"" || implicitChar === "=");
         }
     };
-        
+    
+    /**
+     * Returns a list of availble HTML attribute hints if possible for the 
+     * current editor context. 
+     *
+     * @return {Object<hints: Array<(String + jQuery.Obj)>, match: String, 
+     *      selectInitial: Boolean>}
+     * Null if the provider wishes to end the hinting session. Otherwise, a
+     * response object that provides 1. a sorted array hints that consists 
+     * of strings; 2. a string match that is used by the manager to emphasize
+     * matching substrings when rendering the hint list; and 3. a boolean that
+     * indicates whether the first result, if one exists, should be selected
+     * by default in the hint list window.
+     */
     AttrHints.prototype.getHints = function (implicitChar) {
         var cursor = this.editor.getCursorPos(),
             tagInfo = HTMLUtils.getTagInfo(this.editor, cursor),
@@ -378,17 +448,29 @@ define(function (require, exports, module) {
                         return item;
                     }
                 }).sort(sortFunc);
+                return {
+                    hints: result,
+                    match: query.queryStr,
+                    selectInitial: true
+                };
+            } else {
+                return null;
             }
         }
 
-        return {
-            hints: result,
-            match: query.queryStr,
-            selectInitial: true
-        };
+        
     };
     
-    
+    /**
+     * Inserts a given HTML attribute hint into the current editor context.
+     * 
+     * @param {String} hint 
+     * The hint to be inserted into the editor context.
+     * 
+     * @return {Boolean} 
+     * Indicates whether the manager should follow hint insertion with an
+     * additional explicit hint request.
+     */
     AttrHints.prototype.insertHint = function (completion) {
         var cursor = this.editor.getCursorPos(),
             start = {line: -1, ch: -1},

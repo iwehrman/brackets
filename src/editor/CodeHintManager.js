@@ -71,7 +71,7 @@ define(function (require, exports, module) {
      * CodeHintProvider.getHints(implicitChar)
      * CodeHintProvider.insertHint(hint)
      * 
-     * These behavior of these three functions is described in detail below. 
+     * The behavior of these three functions is described in detail below. 
      *
      * 
      * # CodeHintProvider.hasHints(editor, implicitChar)
@@ -104,15 +104,15 @@ define(function (require, exports, module) {
      * particular, it should keep a reference to the editor object so that it
      * can access the editor in future calls to getHints and insertHints.
      * 
-     * @param {Editor} editor 
+     * param {Editor} editor 
      * A non-null editor object for the active window.
      *
-     * @param {String} implicitChar 
+     * param {String} implicitChar 
      * Either null, if the hinting request was explicit, or a single character
      * that represents the last insertion and that indicates an implicit
      * hinting request.
      *
-     * @return {Boolean} 
+     * return {Boolean} 
      * Determines whether the current provider is able to provide hints for
      * the given editor context and, in case implicitChar is non- null,
      * whether it is appropriate to do so.
@@ -164,7 +164,7 @@ define(function (require, exports, module) {
      * assume that the document will not be changed outside of the editor
      * during a session.
      *
-     * @return {(Object + jQuery.Deferred)<hints: Array<(String + jQuery.Obj)>, 
+     * return {(Object + jQuery.Deferred)<hints: Array<(String + jQuery.Obj)>, 
      *     match: String, selectInitial: Boolean>}
      * Null if the provider wishes to end the hinting session. Otherwise, a
      * response object, possibly deferred, that provides 1. a sorted array
@@ -197,10 +197,10 @@ define(function (require, exports, module) {
      * explicit hinting request, which may result in a new hinting session
      * being opened with some provider, but not necessarily the current one.
      *
-     * ### @param {String} hint 
+     * param {String} hint 
      * The hint to be inserted into the editor context for the current session.
      * 
-     * @return {Boolean} 
+     * return {Boolean} 
      * Indicates whether the manager should follow hint insertion with an
      * explicit hint request.
      */
