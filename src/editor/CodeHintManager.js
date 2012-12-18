@@ -22,7 +22,7 @@
  */
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, $, window, brackets */
+/*global define, $, brackets */
 
 define(function (require, exports, module) {
     "use strict";
@@ -31,7 +31,7 @@ define(function (require, exports, module) {
     var KeyEvent        = require("utils/KeyEvent"),
         CodeHintList    = require("editor/CodeHintList").CodeHintList;
 
-    var hintProviders   = {},
+    var hintProviders   = { "all" : [] },
         lastChar        = null,
         sessionProvider = null,
         sessionEditor   = null,
@@ -43,39 +43,6 @@ define(function (require, exports, module) {
     function _providerSort(a, b) {
         return b.priority - a.priority;
     }
-
-    /** 
-     *  Return the array of hint providers for the given mode.
-     *  If this is called for the first time, then we check if any provider wants to show
-     *  hints on all modes. If there is any, then we merge it into each individual
-     *  mode provider list.
-     *
-     * @param {(string|Object<name: string>)} mode
-     * @return {Array.<{provider: Object, modes: Array.<string>, priority: number}>}
-     */
-    function _getProvidersForMode(mode) {
-        var allModeProviders,
-            modeName;
-        
-        if (hintProviders.all) {
-            allModeProviders = hintProviders.all;
-            
-            // Remove "all" mode list since we don't need it any more after
-            // merging them to each individual mode provider lists.
-            delete hintProviders.all;
-            
-            $.each(hintProviders, function (key, value) {
-                if (hintProviders[key]) {
-                    hintProviders[key] = hintProviders[key].concat(allModeProviders);
-                    hintProviders[key].sort(_providerSort);
-                }
-            });
-        }
-        
-        modeName = (typeof mode === "string") ? mode : mode.name;
-        return hintProviders[modeName] || [];
-    }
-    
     
     /**    
      * The method by which a CodeHintProvider registers its willingness to
@@ -84,7 +51,7 @@ define(function (require, exports, module) {
      * @param {CodeHintProvider} provider
      * The hint provider to be registered, described below. 
      *
-     * @param {Array[string]} modes
+     * @param {Array[(string|Object<name: string>)]} modes
      * The set of mode names for which the provider is capable of
      * providing hints. If the special mode name "all" is included then
      * the provider may be called upon to provide hints for any mode.
@@ -242,19 +209,55 @@ define(function (require, exports, module) {
                             priority: priority || 0 };
                 
         if (modes) {
-            modes.forEach(function (mode) {
-                if (mode) {
-                    if (!hintProviders[mode]) {
-                        hintProviders[mode] = [];
-                    }
-                    hintProviders[mode].push(providerObj);
-                    
-                    if (hintProviders[mode].length > 1) {
-                        hintProviders[mode].sort(_providerSort);
+            var modeNames = [], registerInAllModes = false;
+            var i, currentModeName;
+            for (i = 0; i < modes.length; i++) {
+                currentModeName = (typeof modes[i] === "string") ? modes[i] : modes[i].name;
+                if (currentModeName) {
+                    if (currentModeName === "all") {
+                        registerInAllModes = true;
+                        break;
+                    } else {
+                        modeNames.push(currentModeName);
                     }
                 }
-            });
+            }
+
+            if (registerInAllModes) {
+                // if we're registering in all, then we ignore the modeNames array
+                // so that we avoid registering a provider twice
+                var providerName;
+                for (providerName in hintProviders) {
+                    if (hintProviders.hasOwnProperty(providerName)) {
+                        hintProviders[providerName].push(providerObj);
+                        hintProviders[providerName].sort(_providerSort);
+                    }
+                }
+            } else {
+                modeNames.forEach(function (modeName) {
+                    if (modeName) {
+                        if (!hintProviders[modeName]) {
+                            // initialize a new mode with all providers
+                            hintProviders[modeName] = Array.prototype.concat(hintProviders.all);
+                        }
+                        hintProviders[modeName].push(providerObj);
+                        hintProviders[modeName].sort(_providerSort);
+                    }
+                });
+            }
         }
+    }
+
+    /** 
+     *  Return the array of hint providers for the given mode.
+     *  This gets called (potentially) on every keypress. So, it should be fast.
+     *
+     * @param {(string|Object<name: string>)} mode
+     * @return {Array.<{provider: Object, modes: Array.<string>, priority: number}>}
+     */
+    function _getProvidersForMode(mode) {
+        var modeName = (typeof mode === "string") ? mode : mode.name;
+        return hintProviders[modeName] || hintProviders.all;
     }
 
     /**
@@ -274,7 +277,7 @@ define(function (require, exports, module) {
      */
     function _inSession(editor) {
         if (sessionEditor !== null) {
-            if (sessionEditor === editor) {
+            if (sessionEditor === editor && hintList.isOpen()) {
                 return true;
             } else {
                 // the editor has changed
@@ -287,6 +290,8 @@ define(function (require, exports, module) {
     /**
      * From an active hinting session, get hints from the current provider and
      * render the hint list window.
+     *
+     * Assumes that it is called when a session is active (i.e. sessionProvider is not null).
      */
     function _updateHintList() {
         var response = sessionProvider.getHints(lastChar);
@@ -338,16 +343,22 @@ define(function (require, exports, module) {
             _updateHintList();
         }
     }
-
+    
     /**
      * Handles keys related to displaying, searching, and navigating the hint list. 
      * This gets called before handleChange.
+     *
+     * TODO: Ideally, we'd get a more semantic event from the editor that told us
+     * what changed so that we could do all of this logic without looking at
+     * key events. Then, the purposes of handleKeyEvent and handleChange could be
+     * combined. Doing this well requires changing CodeMirror.
+     *
      * @param {Editor} editor
      * @param {KeyboardEvent} event
      */
     function handleKeyEvent(editor, event) {
         if (event.type === "keydown") {
-            if (event.keyCode === 32 && event.ctrlKey) {
+            if (event.keyCode === 32 && event.ctrlKey) { // User pressed Ctrl+Space
                 event.preventDefault();
                 lastChar = null;
                 if (_inSession(editor)) {
@@ -355,7 +366,7 @@ define(function (require, exports, module) {
                 }
                 // Begin a new explicit session
                 _beginSession(editor);
-            } else if (hintList && hintList.isOpen()) {
+            } else if (_inSession(editor)) {
                 // Pass event to the hint list, if it's open
                 hintList.handleKeyEvent(event);
             }
@@ -364,12 +375,14 @@ define(function (require, exports, module) {
             lastChar = String.fromCharCode(event.charCode);
         } else if (event.type === "keyup") {
             if (_inSession(editor)) {
-                if (event.keyCode !== 32 && event.ctrlKey) {
-                    // End the session on non-simple navigation commands.
+                if ((event.keyCode !== 32 && event.ctrlKey) || event.altKey || event.metaKey) {
+                    // End the session if the user presses any key with a modifier (other than Ctrl+Space).
                     _endSession();
                 } else if (event.keyCode === KeyEvent.DOM_VK_LEFT ||
                         event.keyCode === KeyEvent.DOM_VK_RIGHT) {
-                    // Update the list after a simple navigation
+                    // Update the list after a simple navigation.
+                    // We do this in "keyup" because we want the cursor position to be updated before
+                    // we redraw the list.
                     _updateHintList();
                 }
             }
