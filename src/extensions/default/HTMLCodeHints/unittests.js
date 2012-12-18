@@ -184,7 +184,7 @@ define(function (require, exports, module) {
             });
             
             it("should list hints to right of '=' sign", function () {
-                testEditor.setCursorPos({ line: 5, ch: 9 });
+                testEditor.setCursorPos({ line: 2, ch: 12 });
                 expectHints(HTMLCodeHints.attrHintProvider);
             });
             
@@ -196,9 +196,10 @@ define(function (require, exports, module) {
                 expectNoHints(HTMLCodeHints.attrHintProvider);
             });
             it("should list hints to right of '=' sign with whitespace", function () {
-                testEditor.setCursorPos({ line: 6, ch: 11 });   // cursor between = and space
+                testDocument.setText('<style type = "text/css">');
+                testEditor.setCursorPos({ line: 0, ch: 13 });   // cursor between = and space
                 expectHints(HTMLCodeHints.attrHintProvider);
-                testEditor.setCursorPos({ line: 6, ch: 12 });   // cursor between space and '
+                testEditor.setCursorPos({ line: 0, ch: 14 });   // cursor between space and "
                 expectHints(HTMLCodeHints.attrHintProvider);
             });
             it("should NOT list hints to right of attribute value with no separating space", function () {
@@ -406,15 +407,13 @@ define(function (require, exports, module) {
                 // Replace div on line 9 with embed type=' ("<div " --> "<embed type='")
                 testDocument.replaceRange("embed type='", { line: 9, ch: 3 }, { line: 9, ch: 7 });
                 testEditor.setCursorPos({ line: 9, ch: 15 });
-                var hintList = expectHints(HTMLCodeHints.attrHintProvider);
-                expect(hintList.length).toBe(0);
+                expectNoHints(HTMLCodeHints.attrHintProvider);
             });
 
             it("should NOT list any attribute value for an unknown attribute name", function () {
                 testDocument.replaceRange("foo='", { line: 9, ch: 7 });  // insert foo=' after <div tag
                 testEditor.setCursorPos({ line: 9, ch: 12 });
-                var hintList = expectHints(HTMLCodeHints.attrHintProvider);
-                expect(hintList.length).toBe(0);
+                expectNoHints(HTMLCodeHints.attrHintProvider);
             });
         });
         

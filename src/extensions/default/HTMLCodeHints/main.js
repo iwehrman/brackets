@@ -313,6 +313,49 @@ define(function (require, exports, module) {
     };
 
     /**
+     * Helper function that determins the possible value hints for a given html tag/attribute name pair
+     * 
+     * @param {String} query
+     * The current query
+     *
+     * @param {String} tagName 
+     * HTML tag name
+     *
+     * @param {String} attrName 
+     * HTML attribute name
+     *
+     * @return {Object<hints: Array[String], sortFunc: ?Function>} 
+     * The possible hints and the sort function to use on thise hints.
+     */
+    AttrHints.prototype._getValueHintsForAttr = function (query, tagName, attrName) {
+        // We look up attribute values with tagName plus a slash and attrName first.  
+        // If the lookup fails, then we fall back to look up with attrName only. Most 
+        // of the attributes in JSON are using attribute name only as their properties, 
+        // but in some cases like "type" attribute, we have different properties like 
+        // "script/type", "link/type" and "button/type".
+        var hints = [],
+            sortFunc = null;
+        
+        var tagPlusAttr = tagName + "/" + attrName,
+            attrInfo = attributes[tagPlusAttr] || attributes[attrName];
+        
+        if (attrInfo) {
+            if (attrInfo.type === "boolean") {
+                hints = ["false", "true"];
+            } else if (attrInfo.type === "url") {
+                // Default behavior for url hints is do not close on select.
+                this.closeOnSelect = false;
+                hints = this._getUrlList(query);
+                sortFunc = StringUtils.urlSort;
+            } else if (attrInfo.attribOption) {
+                hints = attrInfo.attribOption;
+            }
+        }
+        
+        return { hints: hints, sortFunc: sortFunc };
+    };
+    
+    /**
      * Determines whether HTML attribute hints are available in the current 
      * editor context.
      * 
@@ -339,7 +382,7 @@ define(function (require, exports, module) {
             tagInfo = HTMLUtils.getTagInfo(editor, editor.getCursorPos());
             query = null;
             tokenType = tagInfo.position.tokenType;
- 
+             
             if (tokenType === HTMLUtils.ATTR_NAME || tokenType === HTMLUtils.ATTR_VALUE) {
                 if (tagInfo.position.offset >= 0) {
                     if (tokenType === HTMLUtils.ATTR_NAME) {
@@ -355,6 +398,21 @@ define(function (require, exports, module) {
                 }
             }
 
+            // If we're at an attribute value, check if it's an attribute name that has hintable values.
+            if (tokenType === HTMLUtils.ATTR_VALUE && tagInfo.attr.name) {
+                var hintsAndSortFunc = this._getValueHintsForAttr({queryStr: query}, tagInfo.tagName, tagInfo.attr.name);
+                var hints = hintsAndSortFunc.hints;
+                var i, foundPrefix = false;
+                for (i = 0; i < hints.length; i++) {
+                    if (hints[i].indexOf(query) === 0) {
+                        foundPrefix = true;
+                        break;
+                    }
+                }
+                if (!foundPrefix) {
+                    query = null;
+                }
+            }
             return query !== null;
         } else {
             return (implicitChar === " " || implicitChar === "'" ||
@@ -414,26 +472,10 @@ define(function (require, exports, module) {
             this.closeOnSelect = true;
             
             if (attrName) {
-                // We look up attribute values with tagName plus a slash and attrName first.  
-                // If the lookup fails, then we fall back to look up with attrName only. Most 
-                // of the attributes in JSON are using attribute name only as their properties, 
-                // but in some cases like "type" attribute, we have different properties like 
-                // "script/type", "link/type" and "button/type".
-                var tagPlusAttr = tagName + "/" + attrName,
-                    attrInfo = attributes[tagPlusAttr] || attributes[attrName];
+                var hintsAndSortFunc = this._getValueHintsForAttr(query, tagName, attrName);
+                hints = hintsAndSortFunc.hints;
+                sortFunc = hintsAndSortFunc.sortFunc;
                 
-                if (attrInfo) {
-                    if (attrInfo.type === "boolean") {
-                        hints = ["false", "true"];
-                    } else if (attrInfo.type === "url") {
-                        // Default behavior for url hints is do not close on select.
-                        this.closeOnSelect = false;
-                        hints = this._getUrlList(query);
-                        sortFunc = StringUtils.urlSort;
-                    } else if (attrInfo.attribOption) {
-                        hints = attrInfo.attribOption;
-                    }
-                }
             } else if (tags && tags[tagName] && tags[tagName].attributes) {
                 unfiltered = tags[tagName].attributes.concat(this.globalAttributes);
                 hints = $.grep(unfiltered, function (attr, i) {
