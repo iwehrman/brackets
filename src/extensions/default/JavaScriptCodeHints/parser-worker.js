@@ -242,7 +242,7 @@ function require(url) {
                         removed = lines.splice(lineno, 1, newline);
                         if (removed && removed.length > 0) {
                             setTimeout(function () {
-                                parse(dir, file, text.length, lines.join("\n"), --retries);
+                                parse(dir, file, lines.join("\n"), --retries);
                             }, 0);
                             return;
                         }
