@@ -70,7 +70,7 @@ function require(url) {
         HintUtils   = require("HintUtils.js"),
         esprima     = require("thirdparty/esprima/esprima.js");
 
-    var MAX_RETRIES = 100;
+    var MAX_RETRIES = 10;
 
     function _log(msg) {
         self.postMessage({log: msg });
