@@ -66,6 +66,134 @@ define(function (require, exports, module) {
      * @param {?Scope=} parent - the (optional) parent of the new Scope
      */
     function Scope(tree, parent) {
+        
+        var MODULE_TYPE_AMD         = "AMD",
+            MODULE_TYPE_COMMONJS    = "CommonJS",
+            MODULE_TYPE_NODE        = "Node",
+            MODULE_PARAM_DEFINE     = "define",
+            MODULE_PARAM_REQUIRE    = "require",
+            MODULE_PARAM_EXPORTS    = "exports",
+            MODULE_PARAM_MODULE     = "module";
+
+        function _processImports(left, right, root) {
+            if (root.module.importType === MODULE_TYPE_NODE ||
+                    root.module.importType === MODULE_TYPE_COMMONJS) {
+                if (right.type === "CallExpression" &&
+                        right.callee &&
+                        right.callee.type === "Identifier" &&
+                        right.callee.name === MODULE_PARAM_REQUIRE) {
+                    var args = right["arguments"];
+                    if (args && args.length === 1 &&
+                            args[0].type === "Literal" &&
+                            typeof args[0].value === "string") {
+                        root.addImport(args[0].value, left.name);
+                    }
+                }
+            }
+        }
+        
+        function _processExports(tree, root) {
+            if (tree.type === "MemberExpression") {
+                if (root.module.exportType === MODULE_TYPE_NODE ||
+                        root.module.exportType === MODULE_TYPE_COMMONJS) {
+                    if (tree.computed === false && tree.object && tree.property) {
+                        if (tree.object.type === "Identifier" &&
+                                tree.object.name === MODULE_PARAM_EXPORTS) {
+                            root.addExport(tree.property.name);
+                        } else if (tree.object.type === "MemberExpression") {
+                            if (root.module.exportType === MODULE_TYPE_NODE ||
+                                    root.module.explicitModuleParam) {
+                                if (tree.object.object.type === "Identifier" &&
+                                        tree.object.object.name === MODULE_PARAM_MODULE &&
+                                        tree.object.property &&
+                                        tree.object.property.type === "Identifier" &&
+                                        tree.object.property.name === MODULE_PARAM_EXPORTS) {
+                                    root.addExport(tree.property.name);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (tree.type === "ObjectExpression") {
+                if (root.module.exportType === MODULE_TYPE_AMD ||
+                        root.module.exportType === MODULE_TYPE_COMMONJS) {
+                    if (tree.properties) {
+                        tree.properties.forEach(function (prop) {
+                            if (prop.key && prop.key.type === "Identifier") {
+                                root.addExport(prop.key.name);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        function _defineModule(args, root) {
+            
+            var dependencies = [],
+                wrapper;
+            
+            if (args.length > 0) {
+                root.module.importType = MODULE_TYPE_AMD;
+                root.module.exportType = MODULE_TYPE_AMD;
+                
+                if (args[0].type === "Literal" && typeof args[0].value === "string") {
+                    root.module.name = args[0].value;
+                    args = args.slice(1);
+                }
+                
+                if (args[0].type === "ArrayExpression") {
+                    if (args[0].elements) {
+                        var elems = args[0].elements,
+                            containsOnlyStrings = elems.reduce(function (prev, curr) {
+                                return prev && curr.type === "Literal" &&
+                                        typeof curr.value === "string";
+                            }, true);
+                        if (containsOnlyStrings) {
+                            dependencies = elems;
+                            args = args.slice(1);
+                        }
+                    }
+                } else if (args[0].type === "ObjectExpression") {
+                    root.module.exportType = MODULE_TYPE_AMD;
+                    _processExports(args[0], root);
+                }
+            
+                if (args.length === 1 && args[0].type === "FunctionExpression") {
+                    wrapper = args[0];
+                    
+                    if (dependencies.length > 0) {
+                        if (wrapper.params.length === dependencies.length) {
+                            wrapper.params.forEach(function (param, index) {
+                                if (param.name === MODULE_PARAM_REQUIRE) {
+                                    root.module.importType = MODULE_TYPE_COMMONJS;
+                                }
+                                root.addImport(dependencies[index].value, param.name);
+                            });
+                        }
+                    } else {
+                        if (wrapper.params.length > 0) {
+                            if (wrapper.params[0].type === "Identifier" &&
+                                    wrapper.params[0].name === MODULE_PARAM_REQUIRE) {
+                                root.module.importType = MODULE_TYPE_COMMONJS;
+                                if (wrapper.params.length > 1) {
+                                    if (wrapper.params[1].type === "Identifier" &&
+                                            wrapper.params[1].name === MODULE_PARAM_EXPORTS) {
+                                        root.module.exportType = MODULE_TYPE_COMMONJS;
+                                        if (wrapper.params.length > 2) {
+                                            if (wrapper.params[2].type === "Identifier" &&
+                                                    wrapper.params[2].name === MODULE_PARAM_MODULE) {
+                                                root.module.explicitModuleParam = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         /*
          * Given a member expression, try to add a target-property association
@@ -108,7 +236,8 @@ define(function (require, exports, module) {
          * @param {Scope} parent - the parent of the Scope to be constructed
          */
         function _buildScope(tree, parent) {
-            var child;
+            var root = parent.root,
+                child;
 
             if (tree === undefined || tree === null) {
                 return;
@@ -146,6 +275,7 @@ define(function (require, exports, module) {
                 _buildScope(tree.id, parent);
                 if (tree.init !== null) {
                     _buildScope(tree.init, parent);
+                    _processImports(tree.id, tree.init, parent.root);
                 }
                 break;
 
@@ -205,6 +335,11 @@ define(function (require, exports, module) {
             case "ReturnStatement":
                 if (tree.argument) {
                     _buildScope(tree.argument, parent);
+                    if (parent.parent === root) {
+                        // Returning an object literal inside an anonymous function
+                        // that is a parameter to a define function
+                        _processExports(tree.argument, root);
+                    }
                 }
                 break;
 
@@ -285,8 +420,17 @@ define(function (require, exports, module) {
                 _buildScope(tree.callee, parent);
                 break;
 
-            case "BinaryExpression":
             case "AssignmentExpression":
+                _buildScope(tree.left, parent);
+                _buildScope(tree.right, parent);
+                if (tree.left.type === "Identifier") {
+                    _processImports(tree.left, tree.right, parent.root);
+                } else if (tree.left.type === "MemberExpression") {
+                    _processExports(tree.left, parent.root);
+                }
+                break;
+                    
+            case "BinaryExpression":
             case "LogicalExpression":
                 _buildScope(tree.left, parent);
                 _buildScope(tree.right, parent);
@@ -304,10 +448,14 @@ define(function (require, exports, module) {
                 break;
 
             case "CallExpression":
+                _buildScope(tree.callee, parent);
+                if (tree.callee.type === "Identifier" &&
+                        tree.callee.name === MODULE_PARAM_DEFINE) {
+                    _defineModule(tree["arguments"], root);
+                }
                 tree["arguments"].forEach(function (t) {
                     _buildScope(t, parent);
                 });
-                _buildScope(tree.callee, parent);
                 break;
 
             case "FunctionExpression":
@@ -352,8 +500,10 @@ define(function (require, exports, module) {
         
         if (parent === undefined) {
             this.parent = null;
+            this.root = this;
         } else {
             this.parent = parent;
+            this.root = parent.root;
         }
 
         this.idDeclarations = {};
