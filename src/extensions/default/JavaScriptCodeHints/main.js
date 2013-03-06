@@ -44,6 +44,53 @@ define(function (require, exports, module) {
 
     var MAX_DISPLAYED_HINTS = 100;
 
+    /*
+     * When the editor is changed, reset the hinting session and cached 
+     * information, and reject any pending deferred requests.
+     * 
+     * @param {Editor} editor - editor context to be initialized.
+     */
+    function initializeSession(editor) {
+        ScopeManager.handleEditorChange(editor);
+        session = new Session(editor);
+        cachedScope = null;
+        cachedLine = null;
+        cachedHints = null;
+        cachedType = null;
+    }
+
+    /*
+     * Install editor change listeners
+     * 
+     * @param {Editor} editor - editor context on which to listen for
+     *      changes
+     */
+    function installEditorListeners(editor) {
+        if (!editor) {
+            return;
+        }
+        
+        if (editor.getModeForSelection() === HintUtils.JS_MODE_NAME ||
+                editor.getModeForSelection() === HintUtils.HTML_MODE_NAME) {
+            initializeSession(editor);
+            $(editor)
+                .on(HintUtils.eventName("change"), function () {
+                    ScopeManager.handleFileChange(editor.document);
+                });
+        }
+    }
+
+    /*
+     * Uninstall editor change listeners
+     * 
+     * @param {Editor} editor - editor context on which to stop listening
+     *      for changes
+     */
+    function uninstallEditorListeners(editor) {
+        $(editor)
+            .off(HintUtils.eventName("change"));
+    }
+    
     /**
      * Creates a hint response object. Filters the hint list using the query
      * string, formats the hints for display, and returns a hint response
@@ -224,27 +271,40 @@ define(function (require, exports, module) {
      * @return {boolean} - can the provider provide hints for this session?
      */
     JSHints.prototype.hasHints = function (editor, key) {
-        if ((key === null) || HintUtils.maybeIdentifier(key)) {
-            var cursor  = session.getCursor(),
-                token   = session.getToken(cursor);
-
-            // don't autocomplete within strings or comments, etc.
-            if (token && HintUtils.hintable(token)) {
-                var offset = session.getOffset();
-                
-                // Invalidate cached information if: 1) no scope exists; 2) the
-                // cursor has moved a line; 3) the scope is dirty; or 4) if the
-                // cursor has moved into a different scope. Cached information
-                // is also reset on editor change.
-                if (!cachedScope ||
-                        cachedLine !== cursor.line ||
-                        ScopeManager.isScopeDirty(session.editor.document) ||
-                        !cachedScope.containsPositionImmediate(offset)) {
-                    cachedScope = null;
-                    cachedLine = null;
-                    cachedHints = null;
+        
+        if (editor) {
+            
+            if (editor.getModeForSelection() === HintUtils.JS_MODE_NAME ||
+                    editor.getModeForSelection() === HintUtils.HTML_MODE_NAME) {
+                if (!session) {
+                    installEditorListeners(editor);
                 }
-                return true;
+
+                if ((key === null) || HintUtils.maybeIdentifier(key)) {
+                    var cursor  = session.getCursor(),
+                        token   = session.getToken(cursor);
+        
+                    // don't autocomplete within strings or comments, etc.
+                    if (token && HintUtils.hintable(token)) {
+                        var offset = session.getOffset();
+                        
+                        // Invalidate cached information if: 1) no scope exists; 2) the
+                        // cursor has moved a line; 3) the scope is dirty; or 4) if the
+                        // cursor has moved into a different scope. Cached information
+                        // is also reset on editor change.
+                        if (!cachedScope ||
+                                cachedLine !== cursor.line ||
+                                ScopeManager.isScopeDirty(session.editor.document) ||
+                                !cachedScope.containsPositionImmediate(offset)) {
+                            cachedScope = null;
+                            cachedLine = null;
+                            cachedHints = null;
+                        }
+                        return true;
+                    }
+                }
+            } else {
+                uninstallEditorListeners(editor);
             }
         }
         return false;
@@ -372,55 +432,8 @@ define(function (require, exports, module) {
         return false;
     };
 
-
     // load the extension
     AppInit.appReady(function () {
-
-        /*
-         * When the editor is changed, reset the hinting session and cached 
-         * information, and reject any pending deferred requests.
-         * 
-         * @param {Editor} editor - editor context to be initialized.
-         */
-        function initializeSession(editor) {
-            ScopeManager.handleEditorChange(editor.document);
-            session = new Session(editor);
-            cachedScope = null;
-            cachedLine = null;
-            cachedHints = null;
-            cachedType = null;
-        }
-
-        /*
-         * Install editor change listeners
-         * 
-         * @param {Editor} editor - editor context on which to listen for
-         *      changes
-         */
-        function installEditorListeners(editor) {
-            if (!editor) {
-                return;
-            }
-            
-            if (editor.getModeForSelection() === HintUtils.MODE_NAME) {
-                initializeSession(editor);
-                $(editor)
-                    .on(HintUtils.eventName("change"), function () {
-                        ScopeManager.handleFileChange(editor.document);
-                    });
-            }
-        }
-
-        /*
-         * Uninstall editor change listeners
-         * 
-         * @param {Editor} editor - editor context on which to stop listening
-         *      for changes
-         */
-        function uninstallEditorListeners(editor) {
-            $(editor)
-                .off(HintUtils.eventName("change"));
-        }
 
         /*
          * Handle the activeEditorChange event fired by EditorManager.
@@ -435,7 +448,7 @@ define(function (require, exports, module) {
             uninstallEditorListeners(previous);
             installEditorListeners(current);
         }
-        
+
         ExtensionUtils.loadStyleSheet(module, "styles/brackets-js-hints.css");
         
         // uninstall/install change listener as the active editor changes
@@ -447,7 +460,7 @@ define(function (require, exports, module) {
         installEditorListeners(EditorManager.getActiveEditor());
 
         var jsHints = new JSHints();
-        CodeHintManager.registerHintProvider(jsHints, [HintUtils.MODE_NAME], 0);
+        CodeHintManager.registerHintProvider(jsHints, [HintUtils.JS_MODE_NAME], 0);
 
         // for unit testing
         exports.jsHintProvider = jsHints;

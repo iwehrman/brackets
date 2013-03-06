@@ -458,38 +458,49 @@ define(function (require, exports, module) {
      * @param {!Editor} editor
      * @return {Array.<{start:{line:number, ch:number}, end:{line:number, ch:number}, text:string}>}
      */
-    function findStyleBlocks(editor) {
+    function findBlocksOfMode(editor, mode) {
         // Start scanning from beginning of file
         var ctx = TokenUtils.getInitialContext(editor._codeMirror, {line: 0, ch: 0});
         
-        var styleBlocks = [];
-        var currentStyleBlock = null;
-        var inStyleBlock = false;
+        var blocks = [];
+        var currentBlock = null;
+        var inBlock = false;
+        var currentMode = null;
         
         while (TokenUtils.moveNextToken(ctx)) {
-            if (inStyleBlock) {
-                // Check for end of this <style> block
-                if (ctx.token.state.mode !== "css") {
-                    // currentStyleBlock.end is already set to pos of the last CSS token by now
-                    currentStyleBlock.text = editor.document.getRange(currentStyleBlock.start, currentStyleBlock.end);
-                    inStyleBlock = false;
+            currentMode = TokenUtils.getModeAt(editor._codeMirror, ctx.pos);
+            
+            if (inBlock) {
+                // Check for end of this mode's block
+                if (currentMode !== mode && (!currentMode || currentMode.name !== mode)) {
+                    // currentBlock.end is already set to pos of the block's last token by now
+                    currentBlock.text = editor.document.getRange(currentBlock.start, currentBlock.end);
+                    inBlock = false;
                 } else {
-                    currentStyleBlock.end = { line: ctx.pos.line, ch: ctx.pos.ch };
+                    currentBlock.end = { line: ctx.pos.line, ch: ctx.pos.ch };
                 }
             } else {
-                // Check for start of a <style> block
-                if (ctx.token.state.mode === "css") {
-                    currentStyleBlock = {
+                // Check for start of a mode block
+                if (currentMode === mode || (currentMode && currentMode.name === mode)) {
+                    currentBlock = {
                         start: { line: ctx.pos.line, ch: ctx.pos.ch }
                     };
-                    styleBlocks.push(currentStyleBlock);
-                    inStyleBlock = true;
+                    blocks.push(currentBlock);
+                    inBlock = true;
                 }
-                // else, random token in non-CSS content: ignore
+                // else, random token in non-mode content: ignore
             }
         }
         
-        return styleBlocks;
+        return blocks;
+    }
+    
+    function findStyleBlocks(editor) {
+        return findBlocksOfMode(editor, "css");
+    }
+    
+    function findJavaScriptBlocks(editor) {
+        return findBlocksOfMode(editor, "javascript");
     }
     
     
@@ -504,4 +515,5 @@ define(function (require, exports, module) {
     //compare results with
     exports.createTagInfo = createTagInfo;
     exports.findStyleBlocks = findStyleBlocks;
+    exports.findJavaScriptBlocks = findJavaScriptBlocks;
 });
