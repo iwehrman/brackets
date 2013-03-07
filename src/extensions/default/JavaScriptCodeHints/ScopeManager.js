@@ -168,7 +168,7 @@ define(function (require, exports, module) {
         function blankString(len) {
             if (len > 0) {
                 var arr  = new Array(len + 1),
-                    str  = arr.join(" ");                
+                    str  = arr.join(" ");
                 return str;
             } else {
                 return "";
@@ -199,7 +199,7 @@ define(function (require, exports, module) {
                     
                     do {
                         for (lineIndex; lineIndex < blocks[blockIndex].start.line; lineIndex++) {
-                            newText += lines[lineIndex].replace(/./g, " ") + "\n";
+                            newText += blankString(lines[lineIndex].length) + "\n";
                         }
                         newText += blankString(blocks[blockIndex].start.ch);
                         newText += blocks[blockIndex].text;
@@ -212,11 +212,13 @@ define(function (require, exports, module) {
                     } while (++blockIndex < blocks.length);
                     
                     for (lineIndex; lineIndex < lines.length; lineIndex++) {
-                        newText += lines[lineIndex].replace(/./g, " ");
+                        newText += blankString(lines[lineIndex].length);
                         if (lineIndex + 1 < lines.length) {
                             newText += "\n";
                         }
                     }
+                    
+                    console.assert(document.getText().length === newText.length);
 
                     refreshOuterScope(dir, file, newText);
                 }
