@@ -860,7 +860,7 @@ define(function (require, exports, module) {
         }
         
         // Find all <style> blocks in the HTML file
-        var styleBlocks = HTMLUtils.findStyleBlocks(htmlEditor);
+        var styleBlocks = HTMLUtils.findStyleBlocks(htmlEditor._codeMirror);
         
         styleBlocks.forEach(function (styleBlockInfo) {
             // Search this one <style> block's content, appending results to 'resultSelectors'

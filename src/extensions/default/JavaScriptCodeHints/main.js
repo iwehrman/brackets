@@ -53,10 +53,6 @@ define(function (require, exports, module) {
     function initializeSession(editor) {
         ScopeManager.handleEditorChange(editor);
         session = new Session(editor);
-        cachedScope = null;
-        cachedLine = null;
-        cachedHints = null;
-        cachedType = null;
     }
 
     /*
@@ -66,17 +62,20 @@ define(function (require, exports, module) {
      *      changes
      */
     function installEditorListeners(editor) {
-        if (!editor) {
-            return;
-        }
+        cachedScope = null;
+        cachedLine = null;
+        cachedHints = null;
+        cachedType = null;
         
-        if (editor.getModeForSelection() === HintUtils.JS_MODE_NAME ||
-                editor.getModeForSelection() === HintUtils.HTML_MODE_NAME) {
+        if (editor && (editor.getModeForSelection() === HintUtils.JS_MODE_NAME ||
+                editor.getModeForSelection() === HintUtils.HTML_MODE_NAME)) {
             initializeSession(editor);
             $(editor)
                 .on(HintUtils.eventName("change"), function () {
                     ScopeManager.handleFileChange(editor.document);
                 });
+        } else {
+            session = null;
         }
     }
 
@@ -272,39 +271,36 @@ define(function (require, exports, module) {
      */
     JSHints.prototype.hasHints = function (editor, key) {
         
-        if (editor) {
+        if (editor &&
+                (editor.getModeForSelection() === HintUtils.JS_MODE_NAME ||
+                editor.getModeForSelection() === HintUtils.HTML_MODE_NAME)) {
             
-            if (editor.getModeForSelection() === HintUtils.JS_MODE_NAME ||
-                    editor.getModeForSelection() === HintUtils.HTML_MODE_NAME) {
-                if (!session) {
-                    installEditorListeners(editor);
-                }
+            if (!session) {
+                installEditorListeners(editor);
+            }
 
-                if ((key === null) || HintUtils.maybeIdentifier(key)) {
-                    var cursor  = session.getCursor(),
-                        token   = session.getToken(cursor);
-        
-                    // don't autocomplete within strings or comments, etc.
-                    if (token && HintUtils.hintable(token)) {
-                        var offset = session.getOffset();
-                        
-                        // Invalidate cached information if: 1) no scope exists; 2) the
-                        // cursor has moved a line; 3) the scope is dirty; or 4) if the
-                        // cursor has moved into a different scope. Cached information
-                        // is also reset on editor change.
-                        if (!cachedScope ||
-                                cachedLine !== cursor.line ||
-                                ScopeManager.isScopeDirty(session.editor.document) ||
-                                !cachedScope.containsPositionImmediate(offset)) {
-                            cachedScope = null;
-                            cachedLine = null;
-                            cachedHints = null;
-                        }
-                        return true;
+            if ((key === null) || HintUtils.maybeIdentifier(key)) {
+                var cursor  = session.getCursor(),
+                    token   = session.getToken(cursor);
+    
+                // don't autocomplete within strings or comments, etc.
+                if (token && HintUtils.hintable(token)) {
+                    var offset = session.getOffset();
+                    
+                    // Invalidate cached information if: 1) no scope exists; 2) the
+                    // cursor has moved a line; 3) the scope is dirty; or 4) if the
+                    // cursor has moved into a different scope. Cached information
+                    // is also reset on editor change.
+                    if (!cachedScope ||
+                            cachedLine !== cursor.line ||
+                            ScopeManager.isScopeDirty(session.editor.document) ||
+                            !cachedScope.containsPositionImmediate(offset)) {
+                        cachedScope = null;
+                        cachedLine = null;
+                        cachedHints = null;
                     }
+                    return true;
                 }
-            } else {
-                uninstallEditorListeners(editor);
             }
         }
         return false;

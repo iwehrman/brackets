@@ -458,9 +458,9 @@ define(function (require, exports, module) {
      * @param {!Editor} editor
      * @return {Array.<{start:{line:number, ch:number}, end:{line:number, ch:number}, text:string}>}
      */
-    function findBlocksOfMode(editor, mode) {
+    function findBlocksOfMode(cm, mode) {
         // Start scanning from beginning of file
-        var ctx = TokenUtils.getInitialContext(editor._codeMirror, {line: 0, ch: 0});
+        var ctx = TokenUtils.getInitialContext(cm, {line: 0, ch: 0});
         
         var blocks = [];
         var currentBlock = null;
@@ -468,13 +468,13 @@ define(function (require, exports, module) {
         var currentMode = null;
         
         while (TokenUtils.moveNextToken(ctx)) {
-            currentMode = TokenUtils.getModeAt(editor._codeMirror, ctx.pos);
+            currentMode = TokenUtils.getModeAt(cm, ctx.pos);
             
             if (inBlock) {
                 // Check for end of this mode's block
                 if (currentMode !== mode && (!currentMode || currentMode.name !== mode)) {
                     // currentBlock.end is already set to pos of the block's last token by now
-                    currentBlock.text = editor.document.getRange(currentBlock.start, currentBlock.end);
+                    currentBlock.text = cm.getRange(currentBlock.start, currentBlock.end);
                     inBlock = false;
                 } else {
                     currentBlock.end = { line: ctx.pos.line, ch: ctx.pos.ch };

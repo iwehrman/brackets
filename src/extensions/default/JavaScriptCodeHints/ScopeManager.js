@@ -29,13 +29,14 @@
  */
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, brackets, $, Worker */
+/*global define, brackets, $, Worker, CodeMirror */
 
 define(function (require, exports, module) {
     "use strict";
 
     var DocumentManager     = brackets.getModule("document/DocumentManager"),
         LanguageManager     = brackets.getModule("language/LanguageManager"),
+        EditorManager       = brackets.getModule("editor/EditorManager"),
         FileUtils           = brackets.getModule("file/FileUtils"),
         NativeFileSystem    = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
         ProjectManager      = brackets.getModule("project/ProjectManager"),
@@ -163,6 +164,17 @@ define(function (require, exports, module) {
     }
     
     function refreshDocument(document) {
+        
+        function blankString(len) {
+            if (len > 0) {
+                var arr  = new Array(len + 1),
+                    str  = arr.join(" ");                
+                return str;
+            } else {
+                return "";
+            }
+        }
+        
         var path    = document.file.fullPath,
             split   = HintUtils.splitPath(path),
             dir     = split.dir,
@@ -175,33 +187,41 @@ define(function (require, exports, module) {
                     refreshOuterScope(dir, file, document.getText());
                 });
             } else if (mode === HintUtils.HTML_MODE_NAME) {
-                var blocks = HTMLUtils.findJavaScriptBlocks(editor);
-                
+                var options = { value: document.getText(), mode: "htmlmixed" },
+                    cm = new CodeMirror(function (elt) {}, options),
+                    blocks = HTMLUtils.findJavaScriptBlocks(cm);
+
                 if (blocks.length > 0) {
-                    DocumentManager.getDocumentForPath(path).done(function (document) {
-                        var lines       = document.getText().split("\n"),
-                            blockIndex  = 0,
-                            lineIndex   = 0,
-                            newText     = "";
-                        
-                        do {
-                            for (lineIndex; lineIndex < blocks[blockIndex].start.line; lineIndex++) {
-                                newText += blankString(lines[lineIndex].length) + "\n";
-                            }
-                            newText += blocks[blockIndex].text;
-                            lineIndex = blocks[blockIndex].end.line + 1;
-                        } while (++blockIndex < blocks.length);
-                        
-                        for (lineIndex; lineIndex < lines.length; lineIndex++) {
-                            newText += blankString(lines[lineIndex].length) + "\n";
+                    var lines       = document.getText().split("\n"),
+                        blockIndex  = 0,
+                        lineIndex   = 0,
+                        newText     = "";
+                    
+                    do {
+                        for (lineIndex; lineIndex < blocks[blockIndex].start.line; lineIndex++) {
+                            newText += lines[lineIndex].replace(/./g, " ") + "\n";
                         }
+                        newText += blankString(blocks[blockIndex].start.ch);
+                        newText += blocks[blockIndex].text;
+                        lineIndex = blocks[blockIndex].end.line;
+                        newText += blankString(lines[lineIndex].length - blocks[blockIndex].end.ch);
+                        if (lineIndex < lines.length) {
+                            newText += "\n";
+                            lineIndex++;
+                        }
+                    } while (++blockIndex < blocks.length);
+                    
+                    for (lineIndex; lineIndex < lines.length; lineIndex++) {
+                        newText += lines[lineIndex].replace(/./g, " ");
+                        if (lineIndex + 1 < lines.length) {
+                            newText += "\n";
+                        }
+                    }
 
-                        refreshOuterScope(dir, file, newText);
-                    });
-
+                    refreshOuterScope(dir, file, newText);
                 }
             }
-        }   
+        }
     }
 
     /**
@@ -361,7 +381,7 @@ define(function (require, exports, module) {
             
             // Request the outer scope from the parser worker.
             DocumentManager.getDocumentForPath(dir + file).done(function (document) {
-                refreshOuterScope(dir, file, document.getText());
+                refreshDocument(document);
             });
             return { promise: pendingRequest.deferred.promise() };
         } else {
@@ -461,14 +481,14 @@ define(function (require, exports, module) {
      * Called each time a new editor becomes active. Refreshes the outer scopes
      * of the given file as well as of the other files in the given directory.
      * 
-     * @param {editor} editor - the editor that has changed
+     * @param {Document} document - the document of the editor that has changed
      */
     function handleEditorChange(editor) {
         
-        function blankString(len) {
-            var blank = new Array(len);
-            return blank.map(function () { return " "; }).join("");
-        }
+//        function blankString(len) {
+//            var blank = new Array(len);
+//            return blank.map(function () { return " "; }).join("");
+//        }
         
         var document    = editor.document,
             path        = document.file.fullPath,
@@ -483,50 +503,50 @@ define(function (require, exports, module) {
         reader.readEntries(function (entries) {
             entries.slice(0, MAX_FILES_IN_DIR).forEach(function (entry) {
                 if (entry.isFile) {
-                    var path    = entry.fullPath,
-                        split   = HintUtils.splitPath(path),
-                        dir     = split.dir,
-                        file    = split.file;
+                    var path    = entry.fullPath;
                     
-                    if (file.indexOf(".") > 1) { // ignore /.dotfiles
-                        var mode = LanguageManager.getLanguageForFileExtension(entry.fullPath).getId();
-                        if (mode === HintUtils.JS_MODE_NAME) {
-                            DocumentManager.getDocumentForPath(path).done(function (document) {
-                                refreshOuterScope(dir, file, document.getText());
-                            });
-                        } else if (mode === HintUtils.HTML_MODE_NAME) {
-                            var blocks = HTMLUtils.findJavaScriptBlocks(editor);
-                            
-                            if (blocks.length > 0) {
-                                DocumentManager.getDocumentForPath(path).done(function (document) {
-                                    var lines       = document.getText().split("\n"),
-                                        blockIndex  = 0,
-                                        lineIndex   = 0,
-                                        newText     = "";
-                                    
-                                    do {
-                                        for (lineIndex; lineIndex < blocks[blockIndex].start.line; lineIndex++) {
-                                            newText += blankString(lines[lineIndex].length) + "\n";
-                                        }
-                                        newText += blocks[blockIndex].text;
-                                        lineIndex = blocks[blockIndex].end.line + 1;
-                                    } while (++blockIndex < blocks.length);
-                                    
-                                    for (lineIndex; lineIndex < lines.length; lineIndex++) {
-                                        newText += blankString(lines[lineIndex].length) + "\n";
-                                    }
-
-                                    refreshOuterScope(dir, file, newText);
-                                });
-
-                            }
-                        }
-                    }
+                    DocumentManager.getDocumentForPath(path).done(function (document) {
+                        refreshDocument(document);
+                    });
+//                    if (file.indexOf(".") > 1) { // ignore /.dotfiles
+//                        var mode = LanguageManager.getLanguageForFileExtension(entry.fullPath).getId();
+//                        if (mode === HintUtils.JS_MODE_NAME) {
+//                            DocumentManager.getDocumentForPath(path).done(function (document) {
+//                                refreshOuterScope(dir, file, document.getText());
+//                            });
+//                        } else if (mode === HintUtils.HTML_MODE_NAME) {
+//                            var blocks = HTMLUtils.findJavaScriptBlocks(editor);
+//                            
+//                            if (blocks.length > 0) {
+//                                DocumentManager.getDocumentForPath(path).done(function (document) {
+//                                    var lines       = document.getText().split("\n"),
+//                                        blockIndex  = 0,
+//                                        lineIndex   = 0,
+//                                        newText     = "";
+//                                    
+//                                    do {
+//                                        for (lineIndex; lineIndex < blocks[blockIndex].start.line; lineIndex++) {
+//                                            newText += blankString(lines[lineIndex].length) + "\n";
+//                                        }
+//                                        newText += blocks[blockIndex].text;
+//                                        lineIndex = blocks[blockIndex].end.line + 1;
+//                                    } while (++blockIndex < blocks.length);
+//                                    
+//                                    for (lineIndex; lineIndex < lines.length; lineIndex++) {
+//                                        newText += blankString(lines[lineIndex].length) + "\n";
+//                                    }
+//
+//                                    refreshOuterScope(dir, file, newText);
+//                                });
+//
+//                            }
+//                        }
+//                    }
                 }
             });
         }, function (err) {
             console.log("Unable to refresh directory: " + err);
-            refreshOuterScope(dir, file, document.getText());
+            refreshDocument(document);
         });
     }
 
@@ -543,7 +563,7 @@ define(function (require, exports, module) {
             file    = split.file;
         
         markFileDirty(dir, file);
-        refreshOuterScope(dir, file, document.getText());
+        refreshDocument(document);
     }
 
     /*
@@ -580,7 +600,7 @@ define(function (require, exports, module) {
 
                 if (state.dirtyFile) {
                     DocumentManager.getDocumentForPath(path).done(function (document) {
-                        refreshOuterScope(dir, file, document.getText());
+                        refreshDocument(document);
                     });
                 }
 
