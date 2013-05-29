@@ -16,7 +16,7 @@
     },
     "name": "Edge Code",
     "version": "0.94.0-0",
-    "apiVersion": "0.25.0",
+    "apiVersion": "0.26.0",
     "homepage": "http://adobe.com/go/edgecode",
     "issues": {
         "url": "https://git.corp.adobe.com/edge/edge-code/issues"
