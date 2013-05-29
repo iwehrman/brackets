@@ -26,5 +26,10 @@
 
 define({
     // product-specific strings
-    "APP_NAME"                             : "Brackets"
+    "CMD_ABOUT"                             : "About Adobe Edge Code",
+    "APP_NAME"                              : "Edge Code CC",
+    "ABOUT_TEXT_LINE1"                      : "{BUILD_TYPE} {VERSION} (Preview)",
+    "ABOUT_TEXT_LINE4"                      : "Built on top of Brackets - <a class=\"clickable-link\" data-href=\"https://github.com/adobe/brackets/\">https://github.com/adobe/brackets/</a>",
+    "ABOUT_TEXT_LINE5"                      : "Special thanks to the Brackets contributors:",
+    "ABOUT_TEXT_LINE_EDGECODE_TEAM"         : "<b>Edge Code Team:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thie&szlig;, Ian Wehrman."
 });

@@ -1,17 +1,30 @@
 {
+    "name"                  : "Edge Code",
+    "homepage"              : "http://adobe.com/go/edgecode",
+    "issues"                :
+    {
+        "url"               : "https://git.corp.adobe.com/edge/edge-code/issues"
+    },
+    "repository"            :
+    {
+        "type"              : "git",
+        "url"               : "https://git.corp.adobe.com/edge/edge-code.git",
+        "branch"            : "",
+        "SHA"               : ""
+    },
     "config"                :
     {
-        "app_title"         : "Brackets",
-        "app_name_about"    : "Brackets",
-        "about_icon"        : "styles/images/brackets_icon.svg",
-        "update_info_url"   : "http://dev.brackets.io/updates/stable/",
-        "how_to_use_url"    : "https://github.com/adobe/brackets/wiki/How-to-Use-Brackets",
-        "forum_url"         : "https://groups.google.com/forum/?fromgroups#!forum/brackets-dev",
-        "release_notes_url" : "https://github.com/adobe/brackets/wiki/Release-Notes",
-        "report_issue_url"  : "https://github.com/adobe/brackets/wiki/How-to-Report-an-Issue",
-        "twitter_url"       : "https://twitter.com/brackets",
-        "troubleshoot_url"  : "https://github.com/adobe/brackets/wiki/Troubleshooting#wiki-livedev",
-        "twitter_name"      : "@brackets",
+        "app_title"         : "Adobe Edge Code CC (Preview)",
+        "app_name_about"    : "Adobe® Edge Code CC",
+        "about_icon"        : "styles/images/code_app.svg",
+        "enable_jslint"     : false,
+        "how_to_use_url"    : "http://www.adobe.com/devnet/edge-code/articles/code-editing-with-edge-code.html",
+        "forum_url"         : "http://adobe.com/go/edge_code_forum",
+        "release_notes_url" : "http://adobe.com/go/edgecode_releasenotes",
+        "troubleshoot_url"  : "http://forums.adobe.com/docs/DOC-3027",
+        "report_issue_url"  : "",
+        "twitter_url"       : "https://twitter.com/edge_code",
+        "twitter_name"      : "@edge_code",
         "contributors_url"  : "https://api.github.com/repos/adobe/brackets/contributors",
         "extension_wiki_url": "https://github.com/adobe/brackets/wiki/Brackets-Extensions"
     }

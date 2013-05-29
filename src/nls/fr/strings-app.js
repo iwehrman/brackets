@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2012 Adobe Systems Incorporated. All rights reserved.
- *  
+ * Copyright (c) 2013 Adobe Systems Incorporated. All rights reserved.
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"), 
  * to deal in the Software without restriction, including without limitation 
@@ -25,10 +25,11 @@
 /*global define */
 
 define({
-    // Relative to the samples folder
-    "GETTING_STARTED"           : "root/Getting Started",
-    "ADOBE_THIRD_PARTY"         : "http://www.adobe.com/go/thirdparty/",
-    "WEB_PLATFORM_DOCS_LICENSE" : "http://creativecommons.org/licenses/by/3.0/",
-    "UPDATE_INFO_URL"           : "https://download.macromedia.com/pub/edgetools/code/{{level}}/en",
-    "UPDATE_DOWNLOAD_URL"       : "http://www.adobe.com/go/edgecodecc"
+    // product-specific strings
+	"CMD_ABOUT": "A propos d’Adobe Edge Code",
+	"APP_NAME": "Edge Code CC",
+	"ABOUT_TEXT_LINE1": "{BUILD_TYPE} {VERSION} (Preview)",
+	"ABOUT_TEXT_LINE4": "Développé à partir de Brackets - <a class=\"clickable-link\" data-href=\"https://github.com/adobe/brackets/\">https://github.com/adobe/brackets/</a>",
+	"ABOUT_TEXT_LINE5": "Un grand merci à ceux qui ont contribué à Brackets :",
+	"ABOUT_TEXT_LINE_EDGECODE_TEAM": "<b>Equipe Edge Code:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thiess, Ian Wehrman."
 });

@@ -35,13 +35,18 @@ define(function (require, exports, module) {
         NativeApp            = require("utils/NativeApp"),
         PreferencesManager   = require("preferences/PreferencesManager"),
         Strings              = require("strings"),
+        Urls                 = require("i18n!nls/urls"),
         StringUtils          = require("utils/StringUtils"),
         Global               = require("utils/Global"),
         UpdateDialogTemplate = require("text!htmlContent/update-dialog.html"),
         UpdateListTemplate   = require("text!htmlContent/update-list.html");
     
-    var defaultPrefs = {lastNotifiedBuildNumber: 0};
-    
+    var defaultPrefs = {
+            lastNotifiedBuildNumber : 0,
+            lastInfoURLFetchTime    : 0,
+            lastUsageReportTime     : 0,
+            lastSubscriptionLevel   : 0
+        };
     
     // Extract current build number from package.json version field 0.0.0-0
     var _buildNumber = Number(/-([0-9]+)/.exec(brackets.metadata.version)[1]);
@@ -58,12 +63,20 @@ define(function (require, exports, module) {
     
     // Last time the versionInfoURL was fetched
     var _lastInfoURLFetchTime = _prefs.getValue("lastInfoURLFetchTime");
-
-    // URL to load version info from. By default this is loaded no more than once a day. If 
-    // you force an update check it is always loaded.
     
-    // URL to fetch the version information.
+    // Last time subscription status was reported
+    var _lastUsageReportTime = _prefs.getValue("lastUsageReportTime");
+    
+    // Mustache template for the URL at which version information is found.
+    // By default this is loaded no more than once a day. If you force an
+    // update check it is always loaded.
+    // 
+    // @param {Number} level - subscription level
+    // @param {String} locale - the current locale
     var _versionInfoURL;
+    
+    // Information about the last version info request. Only used for unit testing.
+    var _lastRequest = {};
     
     // Information on all posted builds of Brackets. This is an Array, where each element is 
     // an Object with the following fields:
@@ -85,6 +98,49 @@ define(function (require, exports, module) {
      */
     var _addedClickHandler = false;
     
+    // Subscription level constants. The values are important. See: 
+    // https://zerowing.corp.adobe.com/display/helium/Tracking+weekly+usage+for+all+users
+    var _subscriptionLevel = {
+        unknown : 0,
+        free    : 1,
+        paid    : 2,
+        none    : 3
+    };
+    
+    /**
+     * Translate a subscription status string to a subscription level.
+     * 
+     * @param {?String} status - the subscription status; empty if unknown
+     * @return {Number} - the subscription level
+     */
+    function _getSubscriptionLevel(status) {
+        switch (status.toUpperCase()) {
+        case "FREE_LVL_1":
+        case "FREE_LVL_2":
+        case "CS_LVL_1":
+            return _subscriptionLevel.free;
+        case "CS_LVL_2":
+            return _subscriptionLevel.paid;
+        default:
+            return _subscriptionLevel.unknown;
+        }
+    }
+    
+    /** 
+     * Get the version info URL for the current locale and the given
+     * subscription level.
+     * 
+     * @param {Number} level - subscription level
+     * @return {String} the version info URL
+     */
+    function _getVersionInfoURL(level) {
+        var settings = {
+            level: level
+        };
+        
+        return Mustache.render(_versionInfoURL, settings);
+    }
+    
     /**
      * Get a data structure that has information for all builds of Brackets.
      *
@@ -93,74 +149,122 @@ define(function (require, exports, module) {
      * 24 hours have passed since the last fetch, or if cached data can't be found, 
      * the data is fetched again.
      *
-     * If new data is fetched and dontCache is false, the data is saved in preferences
+     * If new data is fetched and cacheData is true, the data is saved in preferences
      * for quick fetching later.
      */
-    function _getUpdateInformation(force, dontCache) {
-        var result = new $.Deferred();
-        var fetchData = false;
-        var data;
+    function _getUpdateInformation(force, cacheData) {
+        var result      = new $.Deferred(),
+            oldVersions = _prefs.getValue("updateInfo"),
+            oneDay      = 1000 * 60 * 60 * 24,
+            oneWeek     = oneDay * 7,
+            now         = Date.now(),
+            level,
+            requestURL;
         
-        // If force is true, always fetch
-        if (force) {
-            fetchData = true;
+        /*
+         * Get user's Creative Cloud subscription status
+         *
+         * @return {$.Promise} a jQuery promise that will be resolved when the shell API call completes.
+         */
+        function getSubscriptionStatus() {
+            var result = new $.Deferred();
+
+            brackets.app.getSubscriptionStatus(function (err, status) {
+                if (err === brackets.fs.NO_ERROR) {
+                    result.resolve(status);
+                } else {
+                    result.reject(err);
+                }
+            });
+            
+            return result.promise();
         }
         
-        // If we don't have data saved in prefs, fetch
-        data = _prefs.getValue("updateInfo");
-        if (!data) {
-            fetchData = true;
-        }
-        
-        // If more than 24 hours have passed since our last fetch, fetch again
-        if ((new Date()).getTime() > _lastInfoURLFetchTime + (1000 * 60 * 60 * 24)) {
-            fetchData = true;
-        }
-        
-        if (fetchData) {
-            $.ajax(_versionInfoURL, {
-                dataType: "text",
-                cache: false,
-                complete: function (jqXHR, status) {
-                    if (status === "success") {
-                        try {
-                            data = JSON.parse(jqXHR.responseText);
-                            if (!dontCache) {
-                                _lastInfoURLFetchTime = (new Date()).getTime();
-                                _prefs.setValue("lastInfoURLFetchTime", _lastInfoURLFetchTime);
-                                _prefs.setValue("updateInfo", data);
-                            }
-                            result.resolve(data);
-                        } catch (e) {
-                            console.log("Error parsing version information");
-                            console.log(e);
-                            result.reject();
-                        }
+        /*
+         * Make an ajax request to the specified URL to get version update info
+         * (and possibly report usage via the URL).
+         *
+         * @param {string} URL - URL to query for version info.
+         * @return {jQuery.Promise} - HTTP request promise
+         */
+        function makeVersionRequest(url) {
+            var settings    = { dataType: "text", cache: false},
+                promise     = $.ajax(url, settings);
+            
+            // for unit testing
+            _lastRequest.url = url;
+            
+            promise.done(function (response) {
+                try {
+                    var versions = JSON.parse(response);
+                    if (cacheData) {
+                        _lastInfoURLFetchTime = Date.now();
+                        _prefs.setValue("lastInfoURLFetchTime", _lastInfoURLFetchTime);
+                        _prefs.setValue("updateInfo", versions);
                     }
-                },
-                error: function (jqXHR, status, error) {
-                    // When loading data for unit tests, the error handler is 
-                    // called but the responseText is valid. Try to use it here,
-                    // but *don't* save the results in prefs.
-                    
-                    if (!jqXHR.responseText) {
-                        // Text is NULL or empty string, reject().
-                        result.reject();
-                        return;
-                    }
-                    
+                    result.resolve(versions);
+                } catch (e) {
+                    console.log("Error parsing version information");
+                    console.log(e);
+                    result.reject();
+                }
+            }).fail(function (jqXHR) {
+                // When loading data for unit tests, the error handler is 
+                // called but the responseText is valid. Try to use it here,
+                // but *don't* save the results in prefs.
+                
+                var response = jqXHR.responseText;
+                if (!response) {
+                    // Text is NULL or empty string, reject().
+                    result.reject();
+                } else {
                     try {
-                        data = JSON.parse(jqXHR.responseText);
-                        result.resolve(data);
+                        var versions = JSON.parse(response);
+                        result.resolve(versions);
                     } catch (e) {
                         result.reject();
                     }
                 }
             });
-        } else {
-            result.resolve(data);
+            
+            return promise;
         }
         
+        // If force is true, or if we don't have old version info saved in 
+        // prefs, or if more than 24 hours have passed since our last fetch,
+        // then fetch new version info
+        if (force || !oldVersions || (now > _lastInfoURLFetchTime + oneDay)) {
+            // add subscription status if last fetch was more than a week ago
+            if (now > _lastUsageReportTime + oneWeek) {
+                getSubscriptionStatus().done(function (status) {
+                    level = _getSubscriptionLevel(status);
+                    requestURL = _getVersionInfoURL(level);
+
+                    // cache the subscription level in case we can't get it next time
+                    _prefs.setValue("lastSubscriptionLevel", level);
+                }).fail(function (err) {
+                    // we couldn't get the subscription level, so try the cached value
+                    level = _prefs.getValue("lastSubscriptionLevel");
+                    requestURL = _getVersionInfoURL(level);
+                    
+                    // don't cache the response if the request failed
+                    cacheData = false;
+                }).always(function () {
+                    makeVersionRequest(requestURL).done(function () {
+                        _lastUsageReportTime = Date.now();
+                        _prefs.setValue("lastUsageReportTime", _lastUsageReportTime);
+                    });
+                });
+            } else {
+                // otherwise, check for a new version without the subscription status
+                requestURL = _getVersionInfoURL(_subscriptionLevel.none);
+                makeVersionRequest(requestURL);
+            }
+        } else {
+            // otherwise, use the old version info
+            result.resolve(oldVersions);
+        }
+
         return result.promise();
     }
     
@@ -190,14 +294,39 @@ define(function (require, exports, module) {
     }
     
     /**
+     * Open CC app web page in the default browser
+     */
+    function _launchCCAppWebPage() {
+        var URL = Urls.UPDATE_DOWNLOAD_URL;
+        NativeApp.openURLInDefaultBrowser(URL);
+    }
+    
+    /**
+     * Open AAM if it's installed; otherwise open CC app web page
+     */
+    function _launchAAM() {
+        var _openAAMCallback = function (code) {
+            if (code !== brackets.fs.NO_ERROR) {
+                _launchCCAppWebPage();
+            }
+        };
+
+        brackets.app.openAAM(_openAAMCallback);
+    }
+    
+    /**
      * Show a dialog that shows the update 
      */
     function _showUpdateNotificationDialog(updates) {
         Dialogs.showModalDialogUsingTemplate(Mustache.render(UpdateDialogTemplate, Strings))
             .done(function (id) {
                 if (id === Dialogs.DIALOG_BTN_DOWNLOAD) {
-                    // The first entry in the updates array has the latest download link
-                    NativeApp.openURLInDefaultBrowser(updates[0].downloadURL);
+                    // For now, we open the CC app web page instead of launching
+                    // a native application manager like AAM
+                    _launchCCAppWebPage();
+                    
+                    // Replace the line above with the one below to launch AAM instead
+                    //_launchAAM();
                 }
             });
         
@@ -209,8 +338,7 @@ define(function (require, exports, module) {
         $updateList.html(Mustache.render(UpdateListTemplate, templateVars));
         
         $dlg.on("click", "a", function (e) {
-            var url = $(e.currentTarget).attr("data-url");
-            
+            var url = $(e.target).attr("data-url");
             if (url) {
                 // Make sure the URL has a domain that we know about
                 if (/(brackets\.io|github\.com|adobe\.com)$/i.test(PathUtils.parseUrl(url).hostname)) {
@@ -260,9 +388,21 @@ define(function (require, exports, module) {
                 _versionInfoURL = _testValues._versionInfoURL;
                 usingOverrides = true;
             }
+            
+            if (_testValues.hasOwnProperty("_lastInfoURLFetchTime")) {
+                oldValues._lastInfoURLFetchTime = _lastInfoURLFetchTime;
+                _lastInfoURLFetchTime = _testValues._lastInfoURLFetchTime;
+                usingOverrides = true;
+            }
+            
+            if (_testValues.hasOwnProperty("_lastUsageReportTime")) {
+                oldValues._lastUsageReportTime = _lastUsageReportTime;
+                _lastUsageReportTime = _testValues._lastUsageReportTime;
+                usingOverrides = true;
+            }
         }
         
-        _getUpdateInformation(force || usingOverrides, usingOverrides)
+        _getUpdateInformation(force || usingOverrides, !usingOverrides)
             .done(function (versionInfo) {
                 // Get all available updates
                 var allUpdates = _stripOldVersionInfo(versionInfo, _buildNumber);
@@ -319,6 +459,12 @@ define(function (require, exports, module) {
                     if (oldValues.hasOwnProperty("_versionInfoURL")) {
                         _versionInfoURL = oldValues._versionInfoURL;
                     }
+                    if (oldValues.hasOwnProperty("_lastInfoURLFetchTime")) {
+                        _lastInfoURLFetchTime = oldValues._lastInfoURLFetchTime;
+                    }
+                    if (oldValues.hasOwnProperty("_lastUsageReportTime")) {
+                        _lastUsageReportTime = oldValues._lastUsageReportTime;
+                    }
                 }
                 result.resolve();
             })
@@ -338,8 +484,11 @@ define(function (require, exports, module) {
     }
     
     // Append locale to version info URL
-    _versionInfoURL = brackets.config.update_info_url + brackets.getLocale() + ".json";
+    _versionInfoURL = Urls.UPDATE_INFO_URL + ".json";
     
     // Define public API
     exports.checkForUpdate = checkForUpdate;
+    
+    // for unit tests only
+    exports._lastRequest = _lastRequest;
 });

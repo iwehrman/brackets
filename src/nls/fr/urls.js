@@ -28,5 +28,7 @@ define({
     // Relative to the samples folder
     "GETTING_STARTED"           : "fr/Premiers pas",
     "ADOBE_THIRD_PARTY"         : "http://www.adobe.com/go/thirdparty_fr/",
-    "WEB_PLATFORM_DOCS_LICENSE" : "http://creativecommons.org/licenses/by/3.0/deed.fr"
+    "WEB_PLATFORM_DOCS_LICENSE" : "http://creativecommons.org/licenses/by/3.0/deed.fr",
+    "UPDATE_INFO_URL"           : "https://download.macromedia.com/pub/edgetools/code/{{level}}/fr",
+    "UPDATE_DOWNLOAD_URL"       : "http://www.adobe.com/go/edgecodecc_fr"
 });
