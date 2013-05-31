@@ -21,7 +21,7 @@ To get started with working on this project, do the following:
 
 That's it!  When you run the Edge Code shell, just open `brackets/src/index.html`.
 
-[OPTIONAL] If you need to sync changes with the real brackets repo, do the following to get set up for the steps below:
+**OPTIONAL** If you need to sync changes with the real brackets repo, do the following to get set up for the steps below:
 
     $ git remote add public https://github.com/adobe/brackets.git
     $ git remote add private https://git.corp.adobe.com/edge/edge-code.git
@@ -61,7 +61,7 @@ Finally,
     $ git commit -m "<commit-comment>"
     $ git push -u private <username/new-branch-name>
 
-[**IMPORTANT**] when creating a new pull request for `edge-code`, you must set the `base branch` to `edge-code`.  Otherwise, your change would be merged into master.
+**IMPORTANT** when creating a new pull request for `edge-code`, you must set the `base branch` to `edge-code`.  Otherwise, your change would be merged into master.
 
 ## Merging edge web fonts changes
 
