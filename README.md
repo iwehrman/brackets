@@ -61,7 +61,7 @@ Finally,
     $ git commit -m "<log message>"
     $ git push -u private <username/new-branch-name>
 
-*IMPORTANT* when creating a new pull request for `edge-code`, you must set the "base branch" to "edge-code".  Otherwise, your change would be merged into master.
+**IMPORTANT:** when creating a new pull request for `edge-code`, you must set the `base branch` to `edge-code`.  Otherwise, your change would be merged into master.
 
 ## Merging edge web fonts changes
 
