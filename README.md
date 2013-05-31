@@ -1,109 +1,68 @@
-Welcome to Brackets! [![Build Status](https://travis-ci.org/adobe/brackets.png?branch=master)](https://travis-ci.org/adobe/brackets)
--------------------
+Welcome to Adobe Edge Code!
+---------------------------
 
-Installers for the latest build can be [downloaded here](http://download.brackets.io/).
+This repo contains the files for the ongoing development of Adobe Edge Code (http://html.adobe.com/edge/code/) as a fork of the real [brackets] repo at (https://github.com/adobe/brackets).
 
-This is an early version of Brackets, a code editor for HTML, CSS
-and JavaScript that's *built* in HTML, CSS and JavaScript. 
+There are three branches to note:
+- the `master` branch shadows the real [brackets] repo;
+- the ongoing `edge-code` branch contains files to re-branch [brackets] as Adobe Edge Code; and
+- the ongoing `alf-localization` branch is used by the l10n team to push localization updates.
+note: please do not delete any of these branches (eg. when merging pull requests)
 
-What makes Brackets different from other web code editors?
+[Note: on Windows, all these commands must be run from a GitBash shell.]
 
-* **Tools shouldn't get in your way.** Instead of cluttering up your coding
-environment with lots of panels and icons, the Quick Edit UI in Brackets puts 
-context-specific code and tools inline.
-* **Brackets is in sync with your browser.** With Live Development, Brackets
-works directly with your browser to push code edits instantly and jump
-back and forth between your real source code and the browser view.
-* **Do it yourself.** Because Brackets is open source, and built with HTML, CSS
-and JavaScript, you can help build the best code editor for the web.
+## Setup
 
-You can see some 
-[screenshots of Brackets](https://github.com/adobe/brackets/wiki/Brackets-Screenshots)
-on the wiki and [intro videos](http://www.youtube.com/user/CodeBrackets) on the Brackets YouTube channel.
+To get started with working on this project, do the following:
+1. `git clone https://git.corp.adobe.com/edge/edge-code.git`
+2. `cd brackets`
+3. `git checkout edge-code`
+4. `git submodule update --init --recursive`
+That's it!  When you run the Edge Code shell, just open `brackets/src/index.html`.
 
-Brackets is fairly early in development, so some of the features you would
-expect in a code editor are missing, and some existing features might be
-incomplete or not as useful as you'd want. But if you like the direction
-it's going, _there are lots of ways you can help._ See [CONTRIBUTING.md](https://github.com/adobe/brackets/blob/master/CONTRIBUTING.md)
-for more info. Please contribute!
+[OPTIONAL] If you need to sync changes with the real brackets repo, do the following:
+1. `git remote add public https://github.com/adobe/brackets.git`
+2. `git remote add private https://git.corp.adobe.com/edge/edge-code.git`
 
-The text editor inside Brackets is based on 
-[CodeMirror](http://github.com/marijnh/CodeMirror)&mdash;thanks to Marijn for
-taking our pull requests, implementing feature requests and fixing bugs! See 
-[Notes on CodeMirror](https://github.com/adobe/brackets/wiki/Notes-on-CodeMirror)
-for info on how we're using CodeMirror.
+## Merging brackets changes into master
 
-How to run Brackets
--------------------
+To integrate the latest brackets into this repo, do the following:
+1. `git checkout master`
+2. `git submodule update --init --recursive`
+3. `git fetch public master`.  This should result in a fast-forward merge.  If there are conflicts, please check that something other than a brackets merge hasn't been committed to master.
+4. `git push private master`
 
-**Brackets isn't ready for general use yet.** It's still missing a lot of basic
-editor features. That said, what's there is reasonably stable&mdash;the
-Brackets team uses Brackets to develop Brackets full time. So feel free to
-give it a spin and let us know what's missing!
+Note: this will complete the merge directly into master without the need for a pull request.
 
-Although Brackets is built in HTML/CSS/JS, it currently runs as a desktop 
-application in a thin native shell, so that it can access your local files.
-(If you just try to open the index.html file in a browser, it won't work yet.)
-The native shell for Brackets lives in a separate repo, 
-[adobe/brackets-shell](https://github.com/adobe/brackets-shell/).
+## Merging master into edge-code
 
-The Brackets native shell currently runs on Mac and Windows.
-The community has started working on a Linux port, and is making great progress;
-if you're interested, check out the
-[Linux Version](https://github.com/adobe/brackets/wiki/Linux-Version) wiki page.
+To integrate the latest changes from master (eg. integrating brackets as above), do the following:
+1. `git fetch private`
+2. `git checkout edge-code`
+3. `git submodule update --init --recursive`
+4. `git checkout -b <username/new-branch-name>`
+5. `git merge master`
+6. `git submodule update --init --recursive`
+7. resolve any merge conflicts manually taking care to preserve Edge Code changes that may overlap with new Brackets development
+8. build and (unit) test
+8. `git add`, `git commit`, and `git push -u private <username/new-branch-name>`
 
-You can download stable builds of Brackets from 
-[download.brackets.io](http://download.brackets.io). If you want to pull the repo 
-directly via git, see [How to Hack on Brackets](https://github.com/adobe/brackets/wiki/How-to-Hack-on-Brackets)
-for instructions on how to get everything. 
+IMPORTANT: when creating a new pull request for `edge-code`, you must set the "base branch" to "edge-code".  Otherwise, your change would be merged into master.
 
-By default, Brackets opens a folder containing some simple "Getting Started" content.
-You can choose a different folder to edit using *File > Open Folder*. (Might we
-suggest editing the Brackets source code and submitting some pull requests?)
+## Merging edge web fonts changes
 
-Most of Brackets should be pretty self-explanatory, but for information on how
-to use its unique features, like Quick Edit and Live Development, please read
-[How to Use Brackets](http://github.com/adobe/brackets/wiki/How-to-Use-Brackets). 
-The [extensions wiki page](https://github.com/adobe/brackets/wiki/Brackets-Extensions) 
-has a list of extensions that have been contributed. 
-Also, see the [release notes](http://github.com/adobe/brackets/wiki/Release-Notes)
-for a list of new features and known issues in each build.
+To integrate the latest extension changes, do the following in a local branch:
+1. `cd src/extensions/default/edge-code-web-fonts`
+2. `git fetch origin`
+3. `git merge origin/master`.
+4. Build/test
 
-I found a bug/missing feature!
-------------------------------
+## Merging edge code inspect changes
 
-Issues starting Brackets the first time? Please review [Troubleshooting](https://github.com/adobe/brackets/wiki/Troubleshooting).
+Follow exact same steps as for "Merging edge web fonts changes" above, except do so from the `src/extensions/default/edge-code-inspect` directory.
 
-**For bugs** be sure to [search existing issues](https://github.com/adobe/brackets/issues) first.
-Include steps to consistently reproduce the problem, actual vs. expected results, and your OS and
-Brackets version number. Disable all extensions to verify the issue is a core Brackets bug.
-[Read more guidelines for filing good bugs...](https://github.com/adobe/brackets/wiki/How-to-Report-an-Issue)
+## Tagging a release
+To tag a specific release, run the following in both the edge-code and edge-code-shell repos:
 
-**For feature requests** please first check our [feature backlog](http://bit.ly/BracketsBacklog) to
-see if it's already there; you can upvote it if so. If not, feel free to file it as an issue; we'll
-move it to the feature backlog for you.
-
-I want to help!
----------------
-
-Awesome! Please read the [Guide to Contributing](https://github.com/adobe/brackets/blob/master/CONTRIBUTING.md)
-and learn [How to Hack on Brackets](https://github.com/adobe/brackets/wiki/How-to-Hack-on-Brackets).
-
-I want to keep track of how Brackets is doing!
-----------------------------------------------
-
-Not sure you needed the exclamation point there, but we like your enthusiasm.
-
-**What's Brackets working on next?**
-
-* In our [feature backlog](http://bit.ly/BracketsBacklog), the columns labeled "Sprint N"
-  are features already in progress and should ship within 2 weeks. Features at the top of
-  the "Product Backlog" list will come next.
-* Watch our [GitHub activity stream](https://github.com/adobe/brackets/pulse).
-
-**Contact info:**
-
-* **Twitter:** [@brackets](http://twitter.com/#!/brackets)
-* **Blog:** http://blog.brackets.io/
-* **IRC:** [#brackets on freenode](http://webchat.freenode.net/?channels=brackets)
-* **Developers mailing list:** http://groups.google.com/group/brackets-dev
+1. `git tag -a <tag> -m '<tag msg here>'`
+2. `git push origin <tag>`
