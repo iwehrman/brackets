@@ -58,10 +58,10 @@ Now, resolve any merge conflicts manually taking care to preserve Edge Code chan
 Finally,
 
     $ git add <list of changed files>
-    $ git commit -m "<log message>"
+    $ git commit -m "<commit-comment>"
     $ git push -u private <username/new-branch-name>
 
-**IMPORTANT:** when creating a new pull request for `edge-code`, you must set the `base branch` to `edge-code`.  Otherwise, your change would be merged into master.
+[**IMPORTANT**] when creating a new pull request for `edge-code`, you must set the `base branch` to `edge-code`.  Otherwise, your change would be merged into master.
 
 ## Merging edge web fonts changes
 
@@ -80,5 +80,5 @@ Follow exact same steps as for "Merging edge web fonts changes" above, except do
 ## Tagging a release
 To tag a specific release, run the following in both the edge-code and edge-code-shell repos:
 
-    $ git tag -a <tag> -m '<tag msg here>'
+    $ git tag -a <tag> -m '<tag-comment>'
     $ git push origin <tag>
