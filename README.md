@@ -1,11 +1,11 @@
 Welcome to Adobe Edge Code!
 ---------------------------
 
-This repo contains the files for the ongoing development of Adobe Edge Code (http://html.adobe.com/edge/code/) as a fork of the open-source project [Brackets] (https://github.com/adobe/brackets).
+This repo contains the files for the ongoing development of [Adobe Edge Code] (http://html.adobe.com/edge/code/) as a fork of the open-source project [Brackets] (https://github.com/adobe/brackets).
 
 This repo contains three, persistent branches.  Please do not delete any of these branches (eg. when merging pull requests).
-- the master branch shadows [Brackets] master;
-- the ongoing edge-code branch contains files to re-branch [Brackets] as Adobe Edge Code; and
+- the master branch shadows Brackets master;
+- the ongoing edge-code branch contains files to re-branch Brackets as Adobe Edge Code; and
 - the ongoing alf-localization branch is used by the l10n team to push localization updates.
 
 Note: on Windows, all of the following commands must be run from a Git Bash shell.
@@ -21,7 +21,7 @@ To get started with working on this project, do the following:
 
 That's it!  When you run the Edge Code shell, just open `brackets/src/index.html`.
 
-[OPTIONAL] If you need to sync changes with the real brackets repo, do the following:
+[OPTIONAL] If you need to sync changes with the real brackets repo, do the following to get set up for the steps below:
 
     $ git remote add public https://github.com/adobe/brackets.git
     $ git remote add private https://git.corp.adobe.com/edge/edge-code.git
@@ -55,9 +55,13 @@ To integrate the latest changes from master (eg. integrating brackets as above),
     
 Now, resolve any merge conflicts manually taking care to preserve Edge Code changes that may overlap with new Brackets development.  Of course, next build and (unit) test.
 
-Finally, `git add`, `git commit`, and `git push -u private <username/new-branch-name>`.
+Finally,
 
-IMPORTANT: when creating a new pull request for `edge-code`, you must set the "base branch" to "edge-code".  Otherwise, your change would be merged into master.
+    $ git add <list of changed files>
+    $ git commit -m "<log message>"
+    $ git push -u private <username/new-branch-name>
+
+*IMPORTANT* when creating a new pull request for `edge-code`, you must set the "base branch" to "edge-code".  Otherwise, your change would be merged into master.
 
 ## Merging edge web fonts changes
 
