@@ -31,8 +31,9 @@ That's it!  When you run the Edge Code shell, just open `brackets/src/index.html
 To integrate the latest brackets into this repo, do the following:
 
     $ git checkout master
+    $ git fetch public
     $ git submodule update --init --recursive
-    $ git fetch public master
+    $ git merge public/master
     
 This should result in a fast-forward merge.  If there are conflicts, please check that something other than a brackets merge hasn't been committed to master.
 
