@@ -4,9 +4,9 @@ Welcome to Adobe Edge Code!
 This repo contains the files for the ongoing development of [Adobe Edge Code] (http://html.adobe.com/edge/code/) as a fork of the open-source project [Brackets] (https://github.com/adobe/brackets).
 
 This repo contains three, persistent branches.  Please do not delete any of these branches (eg. when merging pull requests).
-- the master branch shadows Brackets master;
-- the ongoing edge-code branch contains files to re-branch Brackets as Adobe Edge Code; and
-- the ongoing alf-localization branch is used by the l10n team to push localization updates.
+- the `master` branch shadows Brackets master;
+- the ongoing `edge-code` branch contains files to re-branch Brackets as Adobe Edge Code; and
+- the ongoing `alf-localization` branch is used by the l10n team to push localization updates.
 
 Note: on Windows, all of the following commands must be run from a Git Bash shell.
 
@@ -26,7 +26,11 @@ That's it!  When you run the Edge Code shell, just open `brackets/src/index.html
     $ git remote add public https://github.com/adobe/brackets.git
     $ git remote add private https://git.corp.adobe.com/edge/edge-code.git
 
+Note: instead of defining `private`, you could just use the standard `origin` reference.
+
 ## Merging brackets changes into master
+
+We use the `master` branch of this repo to shadow the real Brackets repo.  No changes should be submitted here, other than those used to merge adobe/brackets.  If you need to submit a change to adobe/brackets, please do so to the open-source project [Brackets] (https://github.com/adobe/brackets).
 
 To integrate the latest brackets into this repo, do the following:
 
@@ -44,6 +48,8 @@ Finally,
 Note: this will complete the merge directly into master without the need for a pull request.
 
 ## Merging master into edge-code
+
+Edge Code is built and released off of the on-going `edge-code` branch.  As such, in addition to committing new Edge Code changes here, we'll periodically need to merge the latest Brackets changes as well.  To do so, please complete the "Merging brackets changes into master" instructions above first.  Then, follow these steps to merge those adobe/brackets changes from `master` into the `edge-code` branch.
 
 To integrate the latest changes from master (eg. integrating brackets as above), do the following:
 
