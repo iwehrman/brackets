@@ -4,8 +4,8 @@ Welcome to Adobe Edge Code!
 This repo contains the files for the ongoing development of [Adobe Edge Code] (http://html.adobe.com/edge/code/) as a fork of the open-source project [Brackets] (https://github.com/adobe/brackets).
 
 This repo contains three, persistent branches.  Please do not delete any of these branches (eg. when merging pull requests).
-- the `master` branch shadows Brackets master;
-- the ongoing `edge-code` branch contains files to re-branch Brackets as Adobe Edge Code; and
+- the `master` branch contains files to re-branch Brackets as Adobe Edge Code;
+- the ongoing `Brackets` branch shadows Brackets master; and
 - the ongoing `alf-localization` branch is used by the l10n team to push localization updates.
 
 Note: on Windows, all of the following commands must be run from a Git Bash shell.
@@ -15,11 +15,10 @@ Note: on Windows, all of the following commands must be run from a Git Bash shel
 To get started with working on this project, do the following:
 
     $ git clone https://git.corp.adobe.com/edge/edge-code.git
-    $ cd brackets
-    $ git checkout edge-code
+    $ cd edge-code
     $ git submodule update --init --recursive
 
-That's it!  When you run the Edge Code shell, just open `brackets/src/index.html`.
+That's it!  When you run the Edge Code shell, just open `src/index.html`.
 
 **OPTIONAL** If you need to sync changes with the real brackets repo, do the following to get set up for the steps below:
 
@@ -28,13 +27,13 @@ That's it!  When you run the Edge Code shell, just open `brackets/src/index.html
 
 Note: instead of defining `private`, you could just use the standard `origin` reference.
 
-## Merging brackets changes into master
+## Merging brackets changes into Brackets branch
 
-We use the `master` branch of this repo to shadow the real Brackets repo.  No changes should be submitted here, other than those used to merge adobe/brackets.  If you need to submit a change to adobe/brackets, please do so to the open-source project [Brackets] (https://github.com/adobe/brackets).
+We use the `Brackets` branch of this repo to shadow the real Brackets repo.  No changes should be submitted here, other than those used to merge adobe/brackets.  If you need to submit a change to adobe/brackets, please do so to the open-source project [Brackets] (https://github.com/adobe/brackets).
 
 To integrate the latest brackets into this repo, do the following:
 
-    $ git checkout master
+    $ git checkout brackets
     $ git fetch public
     $ git submodule update --init --recursive
     $ git merge public/master
@@ -43,21 +42,21 @@ This should result in a fast-forward merge.  If there are conflicts, please chec
 
 Finally, 
 
-    $ git push private master
+    $ git push private brackets
 
 Note: this will complete the merge directly into master without the need for a pull request.
 
-## Merging master into edge-code
+## Merging Brackets branch into master
 
-Edge Code is built and released off of the on-going `edge-code` branch.  As such, in addition to committing new Edge Code changes here, we'll periodically need to merge the latest Brackets changes as well.  To do so, please complete the "Merging brackets changes into master" instructions above first.  Then, follow these steps to merge those adobe/brackets changes from `master` into the `edge-code` branch.
+Edge Code is built and released off of the `master` branch.  As such, in addition to committing new Edge Code changes here, we'll periodically need to merge the latest Brackets changes as well.  To do so, please complete the "Merging brackets changes into Brackets branch" instructions above first.  Then, follow these steps to merge those adobe/brackets changes from the `Brackets` branch into `master`.
 
-To integrate the latest changes from master (eg. integrating brackets as above), do the following:
+To integrate the latest changes from the Brackets branch (eg. integrating brackets as above), do the following:
 
     $ git fetch private
-    $ git checkout edge-code
+    $ git checkout master
     $ git submodule update --init --recursive
     $ git checkout -b <username/new-branch-name>
-    $ git merge master
+    $ git merge origin/brackets
     $ git submodule update --init --recursive
     
 Now, resolve any merge conflicts manually taking care to preserve Edge Code changes that may overlap with new Brackets development.  Of course, next build and (unit) test.
