@@ -14,7 +14,7 @@ Note: on Windows, all of the following commands must be run from a Git Bash shel
 
 To get started with working on this project, do the following:
 
-    $ git clone https://git.corp.adobe.com/edge/edge-code.git
+    $ git clone git@git.corp.adobe.com:edge/edge-code.git
     $ cd edge-code
     $ git submodule update --init --recursive
 
@@ -23,7 +23,7 @@ That's it!  When you run the Edge Code shell, just open `src/index.html`.
 **OPTIONAL** If you need to sync changes with the real brackets repo, do the following to get set up for the steps below:
 
     $ git remote add public https://github.com/adobe/brackets.git
-    $ git remote add private https://git.corp.adobe.com/edge/edge-code.git
+    $ git remote add private git@git.corp.adobe.com:edge/edge-code.git
 
 Note: instead of defining `private`, you could just use the standard `origin` reference.
 
