@@ -25,9 +25,6 @@
 [submodule "src/thirdparty/i18n"]
 	path = src/thirdparty/i18n
 	url = https://github.com/requirejs/i18n.git
-[submodule "src/extensions/default/edge-code-inspect"]
-	path = src/extensions/default/edge-code-inspect
-	url = git@git.corp.adobe.com:edge/edge-code-inspect.git
 [submodule "src/extensions/default/edge-code-web-fonts"]
 	path = src/extensions/default/edge-code-web-fonts
 	url = https://github.com/adobe/brackets-edge-web-fonts.git
