@@ -332,11 +332,11 @@ define(function (require, exports, module) {
             });
         
         // Populate the update data
-        var $dlg = $(".update-dialog.instance");
-        var $updateList = $dlg.find(".update-info");
-        var templateVars = $.extend(updates, Strings);
+        var $dlg        = $(".update-dialog.instance"),
+            $updateList = $dlg.find(".update-info");
         
-        $updateList.html(Mustache.render(UpdateListTemplate, templateVars));
+        updates.Strings = Strings;
+        $updateList.html(Mustache.render(UpdateListTemplate, updates));
         
         $dlg.on("click", "a", function (e) {
             var url = $(e.target).attr("data-url");
