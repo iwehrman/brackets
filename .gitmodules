@@ -28,3 +28,6 @@
 [submodule "src/extensions/default/edge-code-web-fonts"]
 	path = src/extensions/default/edge-code-web-fonts
 	url = https://github.com/adobe/brackets-edge-web-fonts.git
+[submodule "src/extensions/default/edge-code-inspect"]
+	path = src/extensions/default/edge-code-inspect
+	url = https://github.com/edge-code/edge-inspect-extension.git
