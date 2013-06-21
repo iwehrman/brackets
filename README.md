@@ -44,7 +44,7 @@ Finally,
 
     $ git push private brackets
 
-Note: this will complete the merge directly into master without the need for a pull request.
+This will complete the merge directly into master without the need for a pull request.  Since this `brackets` branch merely shadows the real Brackets repo, you do not need to create a pull request when submitting changes to this branch.
 
 ## Merging Brackets branch into master
 
@@ -61,13 +61,13 @@ To integrate the latest changes from the Brackets branch (eg. integrating bracke
     
 Now, resolve any merge conflicts manually taking care to preserve Edge Code changes that may overlap with new Brackets development.  Of course, next build and (unit) test.
 
-Finally,
+Next,
 
     $ git add <list of changed files>
     $ git commit -m "<commit-comment>"
     $ git push -u private <username/new-branch-name>
-
-**IMPORTANT** when creating a new pull request for `edge-code`, you must set the `base branch` to `edge-code`.  Otherwise, your change would be merged into master.
+    
+Finally, create and submit a Pull Request for review.
 
 ## Merging edge web fonts changes
 
