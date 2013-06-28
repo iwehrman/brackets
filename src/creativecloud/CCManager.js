@@ -35,16 +35,20 @@ define(function (require, exports, module) {
         AppInit             = require("utils/AppInit");
 
     // private vars
-    var creativeCloudConnector = null;
+    var _creativeCloudConnector = null;
 
     function getAuthorizedUser() {
-        if (creativeCloudConnector) {
-            creativeCloudConnector.call(creativeCloudConnector, "getAuthorizedUser");
+        if (_creativeCloudConnector) {
+            return _creativeCloudConnector.getAuthorizedUser();
         }
     }
 
     function registerCreativeCloudConnector(connector) {
-        creativeCloudConnector = connector;
+        if (_creativeCloudConnector !== null) {
+            console.log("There is already a Creative Cloud Connector registered. This will overwrite the previous one.");
+        }
+
+        _creativeCloudConnector = connector;
     }
 
 //    // Update the MenuItem by changing the underlying command
