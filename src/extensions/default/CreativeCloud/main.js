@@ -31,49 +31,7 @@ define(function (require, exports, module) {
     var CCManager = brackets.getModule("creativecloud/CCManager"),
         AppInit   = brackets.getModule("utils/AppInit");
 
-    function IMSConnector() {
-    }
-
-    // This is the implementation of the Interface
-    IMSConnector.prototype.getAuthorizedUser = function () {
-        var result = new $.Deferred();
-
-        brackets.app.getAuthorizedUser(function (err, status) {
-            if (err === 0) {
-                // remove all authentication related information from the json object
-                var userProfileJson = JSON.parse(status);
-
-                delete userProfileJson.access_token;
-                delete userProfileJson.expires_in;
-                delete userProfileJson.refresh_token;
-                delete userProfileJson.token_type;
-
-                result.resolve(userProfileJson);
-            } else {
-                result.reject(err);
-            }
-        });
-
-        return result.promise();
-    };
-
-    IMSConnector.prototype.getAccessToken = function () {
-        var result = new $.Deferred();
-
-        brackets.app.getAuthorizedUser(function (err, status) {
-            if (err === 0) {
-                // extract only the access_token from the json object
-                result.resolve(JSON.parse(status).access_token);
-            } else {
-                result.reject(err);
-            }
-        });
-
-        return result.promise();
-    };
-
-    // version of the Interface
-    IMSConnector.prototype.version = "1.0";
+    var IMSConnector = require("imsconnector").IMSConnector;
 
     // Once the App has been started, the Creative Cloud Connector will be registered.
     AppInit.appReady(function () {
