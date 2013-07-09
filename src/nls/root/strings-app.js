@@ -35,5 +35,6 @@ define({
 
     // Creative Cloud
     "MANAGE_ACCOUNT_ONLINE"                 : "Manage Account Online...",
-    "COMPLETE_UPDATE_ADOBEID_PROFILE"       : "Complete/Update Adobe ID Profile..."
+    "COMPLETE_UPDATE_ADOBEID_PROFILE"       : "Complete/Update Adobe ID Profile...",
+    "COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL" : "Complete/Update ({{email}}) Adobe ID Profile..."
 });

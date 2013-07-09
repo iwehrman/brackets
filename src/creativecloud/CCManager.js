@@ -23,7 +23,7 @@
 
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, brackets, $ */
+/*global define, Mustache, */
 
 define(function (require, exports, module) {
     "use strict";
@@ -32,14 +32,28 @@ define(function (require, exports, module) {
     var CommandManager      = require("command/CommandManager"),
         Menus               = require("command/Menus"),
         Strings             = require("strings"),
+        NativeApp           = require("utils/NativeApp"),
         AppInit             = require("utils/AppInit");
 
     // private vars
     var _creativeCloudConnector = null;
 
+    var COMMAND_HELP_MANAGE_CREATIVE_CLOUD_ACCOUNT = "help.ManageCreativeCloudAccount",
+        COMMAND_HELP_MANAGE_ADOBEID_PROFILE = "help.ManageAdobeIDProfile";
+
+    // TODO: what about fr and jp Adobe homepage?
+    var URL_MANAGE_ADOBE_ID = "https://www.adobe.com/account/sign-in.adobedotcom.html?returnURL=https://www.adobe.com/account/account-information.html#mypersonalprofile",
+        URL_CREATIVE_CLOUD_HOMEPAGE = "http://creative.adobe.com";
+
     function getAuthorizedUser() {
         if (_creativeCloudConnector) {
             return _creativeCloudConnector.getAuthorizedUser();
+        }
+    }
+
+    function getAccessToken() {
+        if (_creativeCloudConnector) {
+            return _creativeCloudConnector.getAccessToken();
         }
     }
 
@@ -49,25 +63,25 @@ define(function (require, exports, module) {
         }
 
         _creativeCloudConnector = connector;
-    }
 
-//    // Update the MenuItem by changing the underlying command
-//    var updateEnabledState = function () {
-//        var editor = EditorManager.getFocusedEditor();
-//        command3.setEnabled(editor && editor.getSelectedText() !== "");
-//    };
+        getAuthorizedUser().done(function (authorizedUserInfo) {
+            console.log(authorizedUserInfo);
+
+            var menuEntryLabel = Mustache.render(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL, {email : authorizedUserInfo.email});
+            CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(menuEntryLabel);
+        }).fail(function (error) {
+            console.log("Unable to retrieve information about logged in user. Perhaps not logged in?");
+        });
+    }
 
     // menu handler
     function _handleManageCreativeCloudAccount() {
-        console.log("Manage Creative Cloud Account");
+        NativeApp.openURLInDefaultBrowser(URL_CREATIVE_CLOUD_HOMEPAGE);
     }
 
     function _handleManageAdobeIDProfile() {
-        console.log("Manage Adobe ID Profile");
+        NativeApp.openURLInDefaultBrowser(URL_MANAGE_ADOBE_ID);
     }
-
-    var COMMAND_HELP_MANAGE_CREATIVE_CLOUD_ACCOUNT = "help.ManageCreativeCloudAccount",
-        COMMAND_HELP_MANAGE_ADOBEID_PROFILE = "help.ManageAdobeIDProfile";
 
     // register the Menu handler
     CommandManager.register(Strings.MANAGE_ACCOUNT_ONLINE, COMMAND_HELP_MANAGE_CREATIVE_CLOUD_ACCOUNT, _handleManageCreativeCloudAccount);
@@ -87,5 +101,6 @@ define(function (require, exports, module) {
 
     // Define public API
     exports.getAuthorizedUser              = getAuthorizedUser;
+    exports.getAccessToken                 = getAccessToken;
     exports.registerCreativeCloudConnector = registerCreativeCloudConnector;
 });
