@@ -36,14 +36,19 @@ define(function (require, exports, module) {
         brackets.app.getAuthorizedUser(function (err, status) {
             if (err === 0) {
                 // remove all authentication related information from the json object
-                var userProfileJson = JSON.parse(status);
+                try {
+                    var userProfileJson = JSON.parse(status);
 
-                delete userProfileJson.access_token;
-                delete userProfileJson.expires_in;
-                delete userProfileJson.refresh_token;
-                delete userProfileJson.token_type;
+                    delete userProfileJson.access_token;
+                    delete userProfileJson.expires_in;
+                    delete userProfileJson.refresh_token;
+                    delete userProfileJson.token_type;
 
-                result.resolve(userProfileJson);
+                    result.resolve(userProfileJson);
+                } catch (error) {
+                    console.error(error);
+                    result.reject(error);
+                }
             } else {
                 result.reject(err);
             }
@@ -58,7 +63,13 @@ define(function (require, exports, module) {
         brackets.app.getAuthorizedUser(function (err, status) {
             if (err === 0) {
                 // extract only the access_token from the json object
-                result.resolve(JSON.parse(status).access_token);
+                try {
+                    var access_token = JSON.parse(status).access_token;
+                    result.resolve(access_token);
+                } catch (error) {
+                    console.error(error);
+                    result.reject(error);
+                }
             } else {
                 result.reject(err);
             }

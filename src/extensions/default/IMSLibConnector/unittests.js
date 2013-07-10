@@ -30,6 +30,14 @@ define(function (require, exports, module) {
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils"),
         IMSConnector    = require("main");
 
+    function getAuthorizedUser() {
+        return brackets.authentication.getAuthorizedUser();
+    }
+
+    function getAccessToken() {
+        return brackets.authentication.getAccessToken();
+    }
+
     describe("Creative Cloud IMSLib Integration", function () {
         describe("Return valid information for logged in user", function () {
             var IMS_NO_ERROR = 0,
@@ -46,7 +54,7 @@ define(function (require, exports, module) {
                         callback(IMS_NO_ERROR, JSON.stringify({"access_token" : expectedAccessToken}));
                     });
 
-                    promise = IMSConnector.getAccessToken();
+                    promise = getAccessToken();
 
                     promise.done(function (testAccessToken) {
                         accessToken = testAccessToken;
@@ -70,7 +78,7 @@ define(function (require, exports, module) {
                         callback(IMS_ERROR, undefined);
                     });
 
-                    promise = IMSConnector.getAccessToken();
+                    promise = getAccessToken();
 
                     promise.done(function (testAccessToken) {
                         accessToken = testAccessToken;
@@ -86,6 +94,27 @@ define(function (require, exports, module) {
                 runs(function () {
                     expect(accessToken).toBeUndefined();
                     expect(errorCode).toBe(IMS_ERROR);
+                });
+            });
+
+            it("should return an error if the json from imslib is not well formed", function () {
+                var promise,
+                    errorObject;
+
+                runs(function () {
+                    spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
+                        callback(IMS_NO_ERROR, "{\"firstname : \"Joe\"}");
+                    });
+
+                    promise = getAccessToken();
+
+                    promise.fail(function (testErrorObject) {
+                        errorObject = testErrorObject;
+                    });
+
+                    waitsForFail(promise, "Get access token");
+
+                    expect(true).toEqual(errorObject instanceof SyntaxError);
                 });
             });
 
@@ -112,7 +141,7 @@ define(function (require, exports, module) {
                         callback(IMS_NO_ERROR, JSON.stringify(authorizedUserInfo));
                     });
 
-                    promise = IMSConnector.getAuthorizedUser();
+                    promise = getAuthorizedUser();
 
                     promise.done(function (testAuthorizedUserInfo) {
                         authorizedUserInfo = testAuthorizedUserInfo;
@@ -140,6 +169,27 @@ define(function (require, exports, module) {
                 });
             });
 
+            it("should return an error if the json from imslib is not well formed", function () {
+                var promise,
+                    errorObject;
+
+                runs(function () {
+                    spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
+                        callback(IMS_NO_ERROR, "{\"firstname : \"Joe\"}");
+                    });
+
+                    promise = getAuthorizedUser();
+
+                    promise.fail(function (testErrorObject) {
+                        errorObject = testErrorObject;
+                    });
+
+                    waitsForFail(promise, "Get authorized user info");
+
+                    expect(true).toEqual(errorObject instanceof SyntaxError);
+                });
+            });
+
             it("should return no information in case of an error", function () {
                 var promise,
                     authorizedUserInfo,
@@ -150,7 +200,7 @@ define(function (require, exports, module) {
                         callback(IMS_ERROR, undefined);
                     });
 
-                    promise = IMSConnector.getAuthorizedUser();
+                    promise = getAuthorizedUser();
 
                     promise.done(function (testAuthorizedUserInfo) {
                         authorizedUserInfo = testAuthorizedUserInfo;

@@ -24,23 +24,15 @@
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 /*global define, brackets, Mustache */
 
-require.config({
-    paths: {
-        "text" : "lib/text",
-        "i18n" : "lib/i18n"
-    },
-    locale: brackets.getLocale()
-});
-
 define(function (require, exports, module) {
     "use strict";
 
     // Brackets modules
     var CommandManager      = brackets.getModule("command/CommandManager"),
         Menus               = brackets.getModule("command/Menus"),
-        Strings             = brackets.getModule("strings"),
         NativeApp           = brackets.getModule("utils/NativeApp"),
-        AppInit             = brackets.getModule("utils/AppInit");
+        AppInit             = brackets.getModule("utils/AppInit"),
+        Strings             = require("strings");
 
     // private vars
     var COMMAND_HELP_MANAGE_CREATIVE_CLOUD_ACCOUNT = "help.ManageCreativeCloudAccount",
@@ -55,7 +47,6 @@ define(function (require, exports, module) {
             brackets.authentication.getAuthorizedUser().done(function (authorizedUserInfo) {
                 var menuEntryLabel = Mustache.render(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL, {email : authorizedUserInfo.email});
                 CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(menuEntryLabel);
-            }).fail(function (error) {
             });
         }
     }
