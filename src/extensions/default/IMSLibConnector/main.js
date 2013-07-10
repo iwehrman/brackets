@@ -67,13 +67,8 @@ define(function (require, exports, module) {
         return result.promise();
     }
 
-    // Once the App has been started, the functions will be registered
-    AppInit.htmlReady(function () {
-        brackets.authentication = {};
-        brackets.authentication.getAccessToken    = _getAccessToken;
-        brackets.authentication.getAuthorizedUser = _getAuthorizedUser;
-    });
-
-    exports.getAccessToken    = _getAccessToken;
-    exports.getAuthorizedUser = _getAuthorizedUser;
+    // Once this Extension has been loaded, the functions will be registered in the global object
+    brackets.authentication = {};
+    brackets.authentication.getAccessToken    = _getAccessToken;
+    brackets.authentication.getAuthorizedUser = _getAuthorizedUser;
 });

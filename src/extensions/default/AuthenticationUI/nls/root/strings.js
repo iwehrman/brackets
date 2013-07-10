@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (c) 2012 Adobe Systems Incorporated. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,15 +21,14 @@
  *
  */
 
+// English - root strings
+
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 /*global define */
 
 define({
-    // product-specific strings
-    "CMD_ABOUT"                             : "About Adobe Edge Code",
-    "APP_NAME"                              : "Edge Code CC",
-    "ABOUT_TEXT_LINE1"                      : "{BUILD_TYPE} {VERSION} (Preview)",
-    "ABOUT_TEXT_LINE4"                      : "Built on top of Brackets - <a class=\"clickable-link\" data-href=\"https://github.com/adobe/brackets/\">https://github.com/adobe/brackets/</a>",
-    "ABOUT_TEXT_LINE5"                      : "Special thanks to the Brackets contributors:",
-    "ABOUT_TEXT_LINE_EDGECODE_TEAM"         : "<b>Edge Code Team:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thie&szlig;, Ian Wehrman.",
+    // Creative Cloud
+    "MANAGE_ACCOUNT_ONLINE"                 : "Manage Account Online...",
+    "COMPLETE_UPDATE_ADOBEID_PROFILE"       : "Complete/Update Adobe ID Profile...",
+    "COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL" : "Complete/Update ({{email}}) Adobe ID Profile..."
 });

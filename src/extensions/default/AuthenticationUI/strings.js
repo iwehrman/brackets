@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (c) 2012 Adobe Systems Incorporated. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,12 +24,14 @@
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 /*global define */
 
-define({
-    // product-specific strings
-    "CMD_ABOUT"                             : "About Adobe Edge Code",
-    "APP_NAME"                              : "Edge Code CC",
-    "ABOUT_TEXT_LINE1"                      : "{BUILD_TYPE} {VERSION} (Preview)",
-    "ABOUT_TEXT_LINE4"                      : "Built on top of Brackets - <a class=\"clickable-link\" data-href=\"https://github.com/adobe/brackets/\">https://github.com/adobe/brackets/</a>",
-    "ABOUT_TEXT_LINE5"                      : "Special thanks to the Brackets contributors:",
-    "ABOUT_TEXT_LINE_EDGECODE_TEAM"         : "<b>Edge Code Team:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thie&szlig;, Ian Wehrman.",
+/**
+ * This file provides the interface to user visible strings in Edge Code. Code that needs
+ * to display strings should should load this module by calling var Strings = require("strings").
+ * The i18n plugin will dynamically load the strings for the right locale and populate
+ * the exports variable. See src\nls\strings.js for the master file of English strings.
+ */
+define(function (require, exports, module) {
+    "use strict";
+
+    module.exports = require("i18n!nls/strings");
 });

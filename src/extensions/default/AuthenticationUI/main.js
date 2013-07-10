@@ -22,7 +22,15 @@
  */
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, brackets, Mustache, */
+/*global define, brackets, Mustache */
+
+require.config({
+    paths: {
+        "text" : "lib/text",
+        "i18n" : "lib/i18n"
+    },
+    locale: brackets.getLocale()
+});
 
 define(function (require, exports, module) {
     "use strict";
@@ -42,26 +50,14 @@ define(function (require, exports, module) {
     var URL_MANAGE_ADOBE_ID = "https://www.adobe.com/account/sign-in.adobedotcom.html?returnURL=https://www.adobe.com/account/account-information.html#mypersonalprofile",
         URL_CREATIVE_CLOUD_HOMEPAGE = "http://creative.adobe.com";
 
-    /**
-     * Return a
-     */
-    function _getAuthorizedUser() {
-        return brackets.authentication.getAuthorizedUser();
-    }
-
-    function _getAccessToken() {
-        return brackets.authentication.getAccessToken();
-    }
-
     function updateMenu() {
-        _getAuthorizedUser().done(function (authorizedUserInfo) {
-            console.log(authorizedUserInfo);
-
-            var menuEntryLabel = Mustache.render(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL, {email : authorizedUserInfo.email});
-            CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(menuEntryLabel);
-        }).fail(function (error) {
-            console.log("Unable to retrieve information about logged in user. Perhaps not logged in?");
-        });
+        if (brackets.authentication) {
+            brackets.authentication.getAuthorizedUser().done(function (authorizedUserInfo) {
+                var menuEntryLabel = Mustache.render(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL, {email : authorizedUserInfo.email});
+                CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(menuEntryLabel);
+            }).fail(function (error) {
+            });
+        }
     }
 
     // menu handler
@@ -87,10 +83,6 @@ define(function (require, exports, module) {
 
     AppInit.appReady(function () {
         setupCCMenuEntries();
-        setTimeout(updateMenu, 1000);
+        updateMenu();
     });
-
-    // Define public API
-    exports.getAuthorizedUser = _getAuthorizedUser;
-    exports.getAccessToken    = _getAccessToken;
 });
