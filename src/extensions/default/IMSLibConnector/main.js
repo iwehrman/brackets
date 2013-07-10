@@ -23,14 +23,14 @@
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 /*global define, brackets, $ */
+
 define(function (require, exports, module) {
     "use strict";
 
-    function IMSConnector() {
-    }
+    // Brackets modules
+    var AppInit = brackets.getModule("utils/AppInit");
 
-    // This is the implementation of the Interface
-    IMSConnector.prototype.getAuthorizedUser = function () {
+    function _getAuthorizedUser() {
         var result = new $.Deferred();
 
         brackets.app.getAuthorizedUser(function (err, status) {
@@ -50,9 +50,9 @@ define(function (require, exports, module) {
         });
 
         return result.promise();
-    };
+    }
 
-    IMSConnector.prototype.getAccessToken = function () {
+    function _getAccessToken() {
         var result = new $.Deferred();
 
         brackets.app.getAuthorizedUser(function (err, status) {
@@ -65,10 +65,15 @@ define(function (require, exports, module) {
         });
 
         return result.promise();
-    };
+    }
 
-    // version of the Interface
-    IMSConnector.prototype.version = "1.0";
+    // Once the App has been started, the functions will be registered
+    AppInit.htmlReady(function () {
+        brackets.authentication = {};
+        brackets.authentication.getAccessToken    = _getAccessToken;
+        brackets.authentication.getAuthorizedUser = _getAuthorizedUser;
+    });
 
-    exports.IMSConnector = IMSConnector;
-})
+    exports.getAccessToken    = _getAccessToken;
+    exports.getAuthorizedUser = _getAuthorizedUser;
+});

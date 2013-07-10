@@ -21,23 +21,20 @@
  *
  */
 
-
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, Mustache, */
+/*global define, brackets, Mustache, */
 
 define(function (require, exports, module) {
     "use strict";
 
     // Brackets modules
-    var CommandManager      = require("command/CommandManager"),
-        Menus               = require("command/Menus"),
-        Strings             = require("strings"),
-        NativeApp           = require("utils/NativeApp"),
-        AppInit             = require("utils/AppInit");
+    var CommandManager      = brackets.getModule("command/CommandManager"),
+        Menus               = brackets.getModule("command/Menus"),
+        Strings             = brackets.getModule("strings"),
+        NativeApp           = brackets.getModule("utils/NativeApp"),
+        AppInit             = brackets.getModule("utils/AppInit");
 
     // private vars
-    var _creativeCloudConnector = null;
-
     var COMMAND_HELP_MANAGE_CREATIVE_CLOUD_ACCOUNT = "help.ManageCreativeCloudAccount",
         COMMAND_HELP_MANAGE_ADOBEID_PROFILE = "help.ManageAdobeIDProfile";
 
@@ -45,26 +42,19 @@ define(function (require, exports, module) {
     var URL_MANAGE_ADOBE_ID = "https://www.adobe.com/account/sign-in.adobedotcom.html?returnURL=https://www.adobe.com/account/account-information.html#mypersonalprofile",
         URL_CREATIVE_CLOUD_HOMEPAGE = "http://creative.adobe.com";
 
-    function getAuthorizedUser() {
-        if (_creativeCloudConnector) {
-            return _creativeCloudConnector.getAuthorizedUser();
-        }
+    /**
+     * Return a
+     */
+    function _getAuthorizedUser() {
+        return brackets.authentication.getAuthorizedUser();
     }
 
-    function getAccessToken() {
-        if (_creativeCloudConnector) {
-            return _creativeCloudConnector.getAccessToken();
-        }
+    function _getAccessToken() {
+        return brackets.authentication.getAccessToken();
     }
 
-    function registerCreativeCloudConnector(connector) {
-        if (_creativeCloudConnector !== null) {
-            console.log("There is already a Creative Cloud Connector registered. This will overwrite the previous one.");
-        }
-
-        _creativeCloudConnector = connector;
-
-        getAuthorizedUser().done(function (authorizedUserInfo) {
+    function updateMenu() {
+        _getAuthorizedUser().done(function (authorizedUserInfo) {
             console.log(authorizedUserInfo);
 
             var menuEntryLabel = Mustache.render(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE_EMAIL, {email : authorizedUserInfo.email});
@@ -97,10 +87,10 @@ define(function (require, exports, module) {
 
     AppInit.appReady(function () {
         setupCCMenuEntries();
+        setTimeout(updateMenu, 1000);
     });
 
     // Define public API
-    exports.getAuthorizedUser              = getAuthorizedUser;
-    exports.getAccessToken                 = getAccessToken;
-    exports.registerCreativeCloudConnector = registerCreativeCloudConnector;
+    exports.getAuthorizedUser = _getAuthorizedUser;
+    exports.getAccessToken    = _getAccessToken;
 });

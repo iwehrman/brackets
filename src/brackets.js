@@ -109,7 +109,6 @@ define(function (require, exports, module) {
     require("search/FindReplace");
     require("extensibility/InstallExtensionDialog");
     require("extensibility/ExtensionManagerDialog");
-    require("creativecloud/CCManager");
 
     PerfUtils.addMeasurement("brackets module dependencies resolved");
 

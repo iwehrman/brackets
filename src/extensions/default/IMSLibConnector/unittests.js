@@ -28,22 +28,12 @@ define(function (require, exports, module) {
     "use strict";
 
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils"),
-        IMSConnector    = require("imsconnector").IMSConnector;
+        IMSConnector    = require("main");
 
-    describe("Creative Cloud IMS Integration", function () {
+    describe("Creative Cloud IMSLib Integration", function () {
         describe("Return valid information for logged in user", function () {
-            var imsconnector;
-
             var IMS_NO_ERROR = 0,
                 IMS_ERROR = 11;
-
-            beforeEach(function () {
-                imsconnector = new IMSConnector();
-            });
-
-            afterEach(function () {
-                imsconnector = null;
-            });
 
             it("should return an access token for the authorized user", function () {
                 var promise,
@@ -56,7 +46,7 @@ define(function (require, exports, module) {
                         callback(IMS_NO_ERROR, JSON.stringify({"access_token" : expectedAccessToken}));
                     });
 
-                    promise = imsconnector.getAccessToken();
+                    promise = IMSConnector.getAccessToken();
 
                     promise.done(function (testAccessToken) {
                         accessToken = testAccessToken;
@@ -80,7 +70,7 @@ define(function (require, exports, module) {
                         callback(IMS_ERROR, undefined);
                     });
 
-                    promise = imsconnector.getAccessToken();
+                    promise = IMSConnector.getAccessToken();
 
                     promise.done(function (testAccessToken) {
                         accessToken = testAccessToken;
@@ -122,7 +112,7 @@ define(function (require, exports, module) {
                         callback(IMS_NO_ERROR, JSON.stringify(authorizedUserInfo));
                     });
 
-                    promise = imsconnector.getAuthorizedUser();
+                    promise = IMSConnector.getAuthorizedUser();
 
                     promise.done(function (testAuthorizedUserInfo) {
                         authorizedUserInfo = testAuthorizedUserInfo;
@@ -160,7 +150,7 @@ define(function (require, exports, module) {
                         callback(IMS_ERROR, undefined);
                     });
 
-                    promise = imsconnector.getAuthorizedUser();
+                    promise = IMSConnector.getAuthorizedUser();
 
                     promise.done(function (testAuthorizedUserInfo) {
                         authorizedUserInfo = testAuthorizedUserInfo;
