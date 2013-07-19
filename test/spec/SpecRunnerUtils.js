@@ -135,11 +135,12 @@ define(function (require, exports, module) {
      * @param {$.Promise} promise
      * @param {string} operationName  Name used for timeout error message
      */
-    window.waitsForFail = function (promise, operationName) {
+    window.waitsForFail = function (promise, operationName, timeout) {
+        timeout = timeout || 1000;
         expect(promise).toBeTruthy();
         waitsFor(function () {
             return promise.state() === "rejected";
-        }, "failure " + operationName, 1000);
+        }, "failure " + operationName, timeout);
     };
     
     /**
@@ -955,6 +956,7 @@ define(function (require, exports, module) {
     exports.getTempDirectory                = getTempDirectory;
     exports.getBracketsSourceRoot           = getBracketsSourceRoot;
     exports.makeAbsolute                    = makeAbsolute;
+    exports.resolveNativeFileSystemPath     = resolveNativeFileSystemPath;
     exports.createMockDocument              = createMockDocument;
     exports.createMockActiveDocument        = createMockActiveDocument;
     exports.createMockElement               = createMockElement;
