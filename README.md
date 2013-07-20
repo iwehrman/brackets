@@ -1,6 +1,6 @@
 Welcome to Adobe Edge Code!
 ---------------------------
- 
+
 This repo contains the files for the ongoing development of [Adobe Edge Code] (http://html.adobe.com/edge/code/) as a fork of the open-source project [Brackets] (https://github.com/adobe/brackets).
 
 This repo contains three, persistent branches.  Please do not delete any of these branches (eg. when merging pull requests).
