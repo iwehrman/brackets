@@ -38,6 +38,10 @@ define(function (require, exports, module) {
     var COMMAND_HELP_MANAGE_CREATIVE_CLOUD_ACCOUNT = "help.ManageCreativeCloudAccount",
         COMMAND_HELP_MANAGE_ADOBEID_PROFILE = "help.ManageAdobeIDProfile";
 
+    // events
+    var EVENT_LOGGED_IN  = "loggedIn",
+        EVENT_LOGGED_OUT = "loggedOut";
+
     // TODO: what about fr and jp Adobe homepage?
     var URL_MANAGE_ADOBE_ID = "https://www.adobe.com/account/sign-in.adobedotcom.html?returnURL=https://www.adobe.com/account/account-information.html#mypersonalprofile",
         URL_CREATIVE_CLOUD_HOMEPAGE = "http://creative.adobe.com";
@@ -75,5 +79,13 @@ define(function (require, exports, module) {
     AppInit.appReady(function () {
         setupCCMenuEntries();
         updateMenu();
+    });
+
+    // this is a workaround to get notified about status changes. This event will be thrown by the
+    // API implementation
+    $(brackets.authentication).on(EVENT_LOGGED_IN, function () {
+        updateMenu();
+    }).on(EVENT_LOGGED_OUT, function () {
+        CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE);
     });
 });
