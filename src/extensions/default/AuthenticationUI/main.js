@@ -83,13 +83,10 @@ define(function (require, exports, module) {
 
     // this is a workaround to get notified about status changes. This event will be thrown by the
     // API implementation
-    $('body').on(EVENT_LOGGED_IN, function () {
-        console.log('User logged in');
+    $(brackets.authentication).on(EVENT_LOGGED_IN, function () {
         updateMenu();
 
     }).on(EVENT_LOGGED_OUT, function () {
-        console.log('User logged out');
         CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE);
     });
-
 });
