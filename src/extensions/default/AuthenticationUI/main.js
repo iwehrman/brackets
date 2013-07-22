@@ -85,7 +85,6 @@ define(function (require, exports, module) {
     // API implementation
     $(brackets.authentication).on(EVENT_LOGGED_IN, function () {
         updateMenu();
-
     }).on(EVENT_LOGGED_OUT, function () {
         CommandManager.get(COMMAND_HELP_MANAGE_ADOBEID_PROFILE).setName(Strings.COMPLETE_UPDATE_ADOBEID_PROFILE);
     });
