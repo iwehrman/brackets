@@ -328,6 +328,11 @@ define(function (require, exports, module) {
                 expect(ExtensionManager.getExtensionURL("my-cool-extension", "1.2.3"))
                     .toBe("http://fake-repository.com/my-cool-extension/my-cool-extension-1.2.3.zip");
             });
+
+            it("should not support the Extensions Registry (ie. no extension registry urls) in Edge Code", function () {
+                expect(origRegistryURL).toBeUndefined();
+                expect(origExtensionUrl).toBeUndefined();
+            });
         });
 
         describe("ExtensionManagerView Model", function () {
