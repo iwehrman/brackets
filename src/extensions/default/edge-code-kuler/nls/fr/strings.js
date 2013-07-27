@@ -25,12 +25,12 @@
 /*global define */
 
 define({
-    MANAGE_THEMES: "Manage Themes...",
-    LOADING_THEMES: "Loading Themes...",
-    NO_THEMES_1: "No themes to show.",
-    NO_THEMES_2: "Visit the <a href='https://kuler.adobe.com'>Kuler website</a> to get started.",
-    KULER_URL: "https://kuler.adobe.com",
-    MANAGE_THEMES_URL: "https://kuler.adobe.com/my/themes",
-    MY_KULER_THEMES: "My Kuler Themes",
-    FAVORITE_KULER_THEMES: "Favorite Kuler Themes"
+	"MANAGE_THEMES": "[7107264] !é=Manage Themes...=!",
+	"LOADING_THEMES": "[7107263] !é=Loading Themes...=!",
+	"NO_THEMES_1": "[7107267] !é=No themes to show.=!",
+	"NO_THEMES_2": "[7107268] !é=Visit the <a href='https://kuler.adobe.com'>Kuler website</a> to get started.=!",
+	"KULER_URL": "[7107262] !é=https://kuler.adobe.com=!",
+	"MANAGE_THEMES_URL": "[7107265] !é=https://kuler.adobe.com/my/themes=!",
+	"MY_KULER_THEMES": "[7107266] !é=My Kuler Themes=!",
+	"FAVORITE_KULER_THEMES": "[7107261] !é=Favorite Kuler Themes=!"
 });
