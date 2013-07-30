@@ -40,8 +40,13 @@ define(function (require, exports, module) {
 
     describe("Creative Cloud IMSLib Integration", function () {
         describe("Return valid information for logged in user", function () {
+            beforeEach(function () {
+                IMSConnector._invalidateCache();
+            });
+
             var IMS_NO_ERROR = 0,
-                IMS_ERROR = 11;
+                IMS_ERROR = 1,
+                IMS_CALL_PENDING = 11;
 
             it("should return an access token for the authorized user", function () {
                 var promise,
@@ -51,7 +56,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
-                        callback(IMS_NO_ERROR, JSON.stringify({"access_token" : expectedAccessToken}));
+                        callback(IMS_NO_ERROR, JSON.stringify({"access_token" : expectedAccessToken, "expires_in" : "60000" }));
                     });
 
                     promise = getAccessToken();
@@ -216,6 +221,37 @@ define(function (require, exports, module) {
                 runs(function () {
                     expect(authorizedUserInfo).toBeUndefined();
                     expect(errorCode).toBe(IMS_ERROR);
+                });
+            });
+
+            it("should return an access token for the authorized user after pending IMSLib call finished", function () {
+                var promise,
+                    accessToken,
+                    timesCalled = 0;
+
+                var expectedAccessToken = "eyJhbGciOiJSUzI1NiJ9.eyJpZCI6IjEzNzMzOTQyNTQzMjMtNTYxZmYyYWUtMWI5OC00ZTY4LWIzMzMtYWQwMWNkZGE0OTZlIiwic2NvcGUiOiJBZG9iZUlELG9wZW5pZCIsImFzIjoiaW1zLW5hMSIsImNyZWF0ZWRfYXQiOiIxMzczMzk0MjU0MzIzIiwiZXhwaXJlc19pbiI6Ijg2NDAwMDAwIiwidXNlcl9pZCI6IjQ3RDUzMTY2NDQ0RTMyQ0U5OTIwMTZCOEBBZG9iZUlEIiwiY2xpZW50X2lkIjoiQWRvYmVTaGFkb3cxIiwidHlwZSI6ImFjY2Vzc190b2tlbiJ9.KIQkR0LzzCJv8PaUKjEVpVO9Ih-mgOw2l_FRkYCtygiU8M5qYuEvj7VH78amBxZIJz7H664s2mEWQQatHG0YZ64qigyRt7ke8zpD-Bv5zT-kqM5jggPyLDhRGQ1Ac9vH5IEH9oHXVnyohTS0c9VnNOz04R8gE2GXiw76LAlI8cs1qFhj1cfsnNAGNgrY1Lncca3PaYuCCQIO0fUn0zQvEpkGJPbDr8AvX3UmuG3gLQsdTIaZop1-RMAY4L3U9nfmUYTS-LvDQXOs85ngzs5Vph0AKepxvWyNmh1yJJLgtlFMGqSMCg6y_QsM1Og2HZrrAVmIfHyE_HJBCMsl1-empw";
+
+                runs(function () {
+                    spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
+                        if (timesCalled === 0) {
+                            timesCalled++;
+                            callback(IMS_CALL_PENDING);
+                        } else {
+                            callback(IMS_NO_ERROR, JSON.stringify({"access_token" : expectedAccessToken, "expires_in" : "60000" }));
+                        }
+                    });
+
+                    promise = getAccessToken();
+
+                    promise.done(function (testAccessToken) {
+                        accessToken = testAccessToken;
+                    });
+
+                    waitsForDone(promise, "Get access token");
+                });
+
+                runs(function () {
+                    expect(accessToken).toEqual(expectedAccessToken);
                 });
             });
         });

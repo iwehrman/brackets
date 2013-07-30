@@ -30,56 +30,151 @@ define(function (require, exports, module) {
     // Brackets modules
     var AppInit = brackets.getModule("utils/AppInit");
 
-    function _getAuthorizedUser() {
-        var result = new $.Deferred();
+    var authorizedUserInfoCache = {},
+        promiseCache = {};
 
-        brackets.app.getAuthorizedUser(function (err, status) {
-            if (err === 0) {
-                // remove all authentication related information from the json object
-                try {
-                    var userProfileJson = JSON.parse(status);
+    var IMS_NO_ERROR = 0,
+        IMSLIB_CALL_PENDING = 11;
 
-                    delete userProfileJson.access_token;
-                    delete userProfileJson.expires_in;
-                    delete userProfileJson.refresh_token;
-                    delete userProfileJson.token_type;
+    function invalidateCache() {
+        delete authorizedUserInfoCache.authorizedUser;
+        delete authorizedUserInfoCache.expirationDate;
+    }
 
-                    result.resolve(userProfileJson);
-                } catch (error) {
-                    console.error(error);
-                    result.reject(error);
-                }
+    function saveAuthorizedUserInCache(authorizedUserProfile, expirationDate) {
+        authorizedUserInfoCache.authorizedUser = authorizedUserProfile;
+        authorizedUserInfoCache.expirationDate = expirationDate;
+    }
+
+    function getAuthorizedUserFromCache() {
+        if (authorizedUserInfoCache.authorizedUser) {
+            if (Date.now() < authorizedUserInfoCache.expirationDate) {
+                return authorizedUserInfoCache.authorizedUser;
             } else {
-                result.reject(err);
+                invalidateCache();
             }
-        });
+        } else {
+            return undefined;
+        }
+    }
 
-        return result.promise();
+    function removeAuthorizationRelatedInformation(userProfileJson) {
+        try {
+            // make shallow copy. This works only with key value pairs where
+            // the value is not a function
+            var modifiedUserProfileJson = JSON.parse(JSON.stringify(userProfileJson));
+
+            delete modifiedUserProfileJson.access_token;
+            delete modifiedUserProfileJson.expires_in;
+            delete modifiedUserProfileJson.refresh_token;
+            delete modifiedUserProfileJson.token_type;
+
+            return modifiedUserProfileJson;
+        } catch (error) {
+            console.error(error);
+
+            // TODO: what to return in error case? The original function argument?
+            return {};
+        }
+    }
+
+    function _getAuthorizedUser() {
+        function getAuthorizedUser(deferred) {
+            var result = deferred || new $.Deferred();
+
+            brackets.app.getAuthorizedUser(function (err, status) {
+                if (err === IMS_NO_ERROR) {
+                    try {
+                        var userProfileJson = JSON.parse(status);
+
+                        // expiration date for cached user profile data
+                        var expirationDate = Date.now() + userProfileJson.expires_in;
+                        var userProfileCopyJson = JSON.parse(status);
+                        saveAuthorizedUserInCache(userProfileCopyJson, expirationDate);
+
+                        result.resolve(removeAuthorizationRelatedInformation(userProfileJson));
+                    } catch (error) {
+                        console.error(error);
+                        result.reject(error);
+                    }
+                } else {
+                    result.reject(err);
+                }
+            });
+
+            return result.promise();
+        }
+
+        function retryUntilSuccess(f) {
+            return f().then(
+                undefined,
+                function (err) {
+                    if (err === IMSLIB_CALL_PENDING) {
+                        return retryUntilSuccess(f); // recurse
+                    } else {
+                        return err;
+                    }
+                }
+            );
+        }
+
+        var authorizedUser = getAuthorizedUserFromCache();
+
+        if (authorizedUser) {
+            return $.Deferred().resolve(removeAuthorizationRelatedInformation(authorizedUser)).promise();
+        } else {
+            return retryUntilSuccess(getAuthorizedUser);
+        }
+
+//            var promise = promiseCache.activePromise;
+//
+//            if (promise) {
+//                return promise;
+//            } else {
+//                promise = getAuthorizedUser();
+//                promiseCache.activePromise = promise;
+//
+//                // remove cached promise
+//                promise.always(function () {
+//                    delete promiseCache.activePromise;
+//                });
+//
+//                return promise;
+//            }
+//        }
     }
 
     function _getAccessToken() {
-        var result = new $.Deferred();
+        function getAccessToken() {
+            var result = new $.Deferred();
 
-        brackets.app.getAuthorizedUser(function (err, status) {
-            if (err === 0) {
-                // extract only the access_token from the json object
-                try {
-                    var access_token = JSON.parse(status).access_token;
-                    result.resolve(access_token);
-                } catch (error) {
-                    console.error(error);
-                    result.reject(error);
-                }
-            } else {
+            _getAuthorizedUser().done(function (userProfile) {
+                var authorizedUser = getAuthorizedUserFromCache();
+                result.resolve(authorizedUser.access_token);
+            }).fail(function (err) {
                 result.reject(err);
-            }
-        });
+            });
 
-        return result.promise();
+            return result.promise();
+        }
+
+        var authorizedUser = getAuthorizedUserFromCache();
+
+        if (authorizedUser && authorizedUser.access_token) {
+            return $.Deferred().resolve(authorizedUser.access_token).promise();
+        } else {
+            return getAccessToken();
+        }
     }
+
+    // warm up
+    _getAuthorizedUser();
 
     // Once this Extension has been loaded, the functions will be registered in the global object
     brackets.authentication = {};
     brackets.authentication.getAccessToken    = _getAccessToken;
     brackets.authentication.getAuthorizedUser = _getAuthorizedUser;
+
+    // for unit testing only
+    exports._invalidateCache                  = invalidateCache;
 });
