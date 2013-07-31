@@ -74,10 +74,10 @@ define(function (require, exports, module) {
     /**
      * Asynchronously get an authStatus object, either from the cache or from the shell.
      *
-     * @param {boolean} force - if set, ignore the cached status
-     * @returns {$.Promise<{accessToken: string, authorizedUser: Object}>} - an authStatus object
+     * @param {boolean} forceRefresh - if set, ignore the cached status and force a refresh
+     * @returns {$.Promise<{accessToken: string, authorizedUser: Object}>} - an auth status object
      */
-    function _getAuthStatus(force) {
+    function _getAuthStatus(forceRefresh) {
         var deferred;
         
         // wrap the callback in a function so it can be called recursively
@@ -96,18 +96,21 @@ define(function (require, exports, module) {
                                 accessToken = statusObj.access_token,
                                 authorizedUser = getAuthorizedUserFromStatus(statusObj),
                                 expiresIn = statusObj.expires_in;
-                            
-                            // clear the cached promise
-                            authStatusDeferred = null;
-                            
-                            // cache the status
+
+                            // cache the auth status
                             authStatusCache = {
                                 accessToken: accessToken,
                                 authorizedUser: authorizedUser
                             };
+
+                            // clear the cached promise
+                            authStatusDeferred = null;
                             
-                            // invalidate the cached status once the token expires
-                            authStatusTimer = window.setTimeout(_invalidateCache, expiresIn);
+                            // invalidate and refresh the cached status once the token expires
+                            authStatusTimer = window.setTimeout(function () {
+                                _invalidateCache();
+                                _getAuthStatus();
+                            }, expiresIn);
                             
                             deferred.resolve(authStatusCache);
                         } catch (parseError) {
@@ -123,16 +126,26 @@ define(function (require, exports, module) {
             }
         }
         
+        // if a request to the shell is already in progress, return the existing
+        // promise for that request; otherwise, make a new request
         if (authStatusDeferred) {
             deferred = authStatusDeferred;
         } else {
             deferred = $.Deferred();
-            if (!force && authStatusCache) {
-                deferred.resolve(authStatusCache);
-            } else {
-                // cache the promise so there is at most one active callback
+            
+            // if there is no cached status, we'll request it from the shell and
+            // cache the promise so that there is at most one active callback
+            if (!authStatusCache) {
                 authStatusDeferred = deferred;
+            }
+            
+            // request status information from the shell if either there is no
+            // cached status or if a refresh has been forced; otherwise immediately
+            // resolve with the cached information
+            if (!authStatusCache || forceRefresh) {
                 getAuthStatusHelper();
+            } else {
+                deferred.resolve(authStatusCache);
             }
         }
         
@@ -152,7 +165,7 @@ define(function (require, exports, module) {
         }).fail(function (err) {
             deferred.reject(err);
         });
-
+        
         return deferred.promise();
     }
     
