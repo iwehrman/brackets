@@ -27,7 +27,7 @@
 define(function (require, exports, module) {
     "use strict";
 
-    var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{queryparams}}",
+    var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
         KULER_RESOURCE_THEMES = "themes",
         KULER_RESOURCE_SEARCH = "search";
 
@@ -46,11 +46,11 @@ define(function (require, exports, module) {
     }
 
     function _constructMyThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=100");
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler&maxNumber=100");
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
