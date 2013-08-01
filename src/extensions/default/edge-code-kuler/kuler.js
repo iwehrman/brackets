@@ -30,18 +30,18 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
+        IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
         KULER_RESOURCE_THEMES = "themes",
-        KULER_RESOURCE_SEARCH = "search";
-
-    var EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A";
-
-    var AUTH_HEADER = "Bearer {{accesstoken}}";
-    
-    var REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
+        KULER_RESOURCE_SEARCH = "search",
+        KULER_WEB_CLIENT_ID = "KulerWeb1",
+        EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
+        AUTH_HEADER = "Bearer {{accesstoken}}",
+        REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
     var themesCache = {},
         promiseCache = {},
-        timers = {};
+        timers = {},
+        jumpURLCache = {};
 
     function _constructKulerURL(resource, queryParams) {
         return Mustache.render(KULER_PRODUCTION_URL, {"resource" : resource, "queryparams" : queryParams});
@@ -151,6 +151,14 @@ define(function (require, exports, module) {
         return _getThemes(url, refresh);
     }
     
+    /**
+     * Get a Kuler theme's URL. If the theme is publically visible, a direct URL
+     * is constructed. If it is private, an IMS JumpURL is constructed that will
+     * redirect to the theme after logging the user in.
+     * 
+     * @param {Object} theme - Kuler theme object
+     * @return {$.Promise<string>} - a jQuery promise that resolves to the theme's URL
+     */
     function getThemeURL(theme) {
         var fullId = theme.name.replace(/\ /g, "-") + "-color-theme-" + theme.id,
             url = Strings.KULER_URL + "/" + fullId + "/",
@@ -161,15 +169,34 @@ define(function (require, exports, module) {
         } else {
             if (brackets.authentication) {
                 brackets.authentication.getAccessToken().done(function (token) {
-                    $.post("https://ims-na1.adobelogin.com/ims/jumptoken/v1", {
-                        target_client_id: "KulerWeb1",
-                        target_redirect_uri: url,
-                        bearer_token: token
-                    }).done(function (data) {
-                        deferred.resolve(data.jump);
-                    }).fail(function (err) {
-                        deferred.reject(err);
-                    });
+                    if (!jumpURLCache.hasOwnProperty(token)) {
+                        // only cache jumpURLs for the most recent access token
+                        jumpURLCache = {};
+                        jumpURLCache[token] = {};
+                    }
+
+                    var jumpURL = jumpURLCache[token][url];
+                    
+                    if (jumpURL) {
+                        deferred.resolve(jumpURL);
+                    } else {
+                        $.post(IMS_JUMPTOKEN_URL, {
+                            target_client_id: KULER_WEB_CLIENT_ID,
+                            target_redirect_uri: url,
+                            bearer_token: token
+                        }).done(function (data) {
+                            jumpURL = data.jump;
+                            
+                            // cache the jump URL if the token hasn't changed
+                            if (jumpURLCache.hasOwnProperty(token)) {
+                                jumpURLCache[token][url] = jumpURL;
+                            }
+                            
+                            deferred.resolve(jumpURL);
+                        }).fail(function (err) {
+                            deferred.reject(err);
+                        });
+                    }
                 }).fail(function (err) {
                     deferred.reject(err);
                 });
