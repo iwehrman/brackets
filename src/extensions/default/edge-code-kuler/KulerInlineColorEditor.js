@@ -116,8 +116,22 @@ define(function (require, exports, module) {
                         
                         $themes.append($theme);
                         
-                        kulerAPI.getThemeURL(theme).done(function (url) {
-                            $theme.find(".kuler-swatch-title").wrap("<a href='" + url + "'>");
+                        kulerAPI.getThemeURLInfo(theme).done(function (info) {
+                            var $title = $theme.find(".kuler-swatch-title"),
+                                $anchor;
+                            
+                            if (info.jumpURL) {
+                                $title.wrap("<a href='" + info.jumpURL + "'>");
+                                $anchor = $title.parent();
+                                $anchor.one("click", function (event) {
+                                    info.invalidate();
+                                    $anchor.one("click", function () {
+                                        $anchor.attr("href", info.kulerURL);
+                                    });
+                                });
+                            } else {
+                                $title.wrap("<a href='" + info.kulerURL + "'>");
+                            }
                         });
                     });
                     $themes.show();

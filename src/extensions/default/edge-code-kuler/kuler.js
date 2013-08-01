@@ -152,20 +152,26 @@ define(function (require, exports, module) {
     }
     
     /**
-     * Get a Kuler theme's URL. If the theme is publically visible, a direct URL
-     * is constructed. If it is private, an IMS JumpURL is constructed that will
-     * redirect to the theme after logging the user in.
+     * Get URL info about Kuler theme, including a direct URL that is immediately
+     * usable if the theme is public, and a jump URL that can be used exactly once
+     * if theme is private. The jump URL will authenticate the user before redirecting
+     * to the direct URL. If a jump URL is used once, the invalidate function should
+     * be called to notify and the direct URL should be used thereafter.
      * 
      * @param {Object} theme - Kuler theme object
-     * @return {$.Promise<string>} - a jQuery promise that resolves to the theme's URL
+     * @return {$.Promise<{kulerURL: string, jumpURL: ?string, invalidate: Function()}>} - 
+     *      a jQuery promise that resolves to the theme's URL info object, which includes
+     *      a direct URL and optionall also a jump URL and invalidation function
      */
-    function getThemeURL(theme) {
+    function getThemeURLInfo(theme) {
         var fullId = theme.name.replace(/\ /g, "-") + "-color-theme-" + theme.id,
             url = Strings.KULER_URL + "/" + fullId + "/",
             deferred = $.Deferred();
         
         if (theme.access && theme.access.visibility === "public") {
-            deferred.resolve(url);
+            deferred.resolve({
+                kulerURL: url
+            });
         } else {
             if (brackets.authentication) {
                 brackets.authentication.getAccessToken().done(function (token) {
@@ -174,12 +180,36 @@ define(function (require, exports, module) {
                         jumpURLCache = {};
                         jumpURLCache[token] = {};
                     }
-
-                    var jumpURL = jumpURLCache[token][url];
                     
-                    if (jumpURL) {
-                        deferred.resolve(jumpURL);
+                    var jumpURL = jumpURLCache[token][url],
+                        invalidateTimer = null,
+                        invalidate = function () {
+                            if (jumpURLCache.hasOwnProperty(token)) {
+                                // the null value indicates that the jump token has
+                                // already been generated and used for this token
+                                jumpURLCache[token][url] = null;
+                            }
+                            
+                            if (invalidateTimer) {
+                                clearTimeout(invalidateTimer);
+                            }
+                        };
+                    
+                    
+                    if (jumpURL === null) {
+                        // a jump url was previously fetched for this url, but it was invalidated
+                        deferred.resolve({
+                            kulerURL: url
+                        });
+                    } else if (typeof jumpURL === "string") {
+                        // an unused jump url is available in the cache
+                        deferred.resolve({
+                            kulerURL: url,
+                            jumpURL: jumpURL,
+                            invalidate: invalidate
+                        });
                     } else {
+                        // no jump url has previously been fetched for this url
                         $.post(IMS_JUMPTOKEN_URL, {
                             target_client_id: KULER_WEB_CLIENT_ID,
                             target_redirect_uri: url,
@@ -190,9 +220,14 @@ define(function (require, exports, module) {
                             // cache the jump URL if the token hasn't changed
                             if (jumpURLCache.hasOwnProperty(token)) {
                                 jumpURLCache[token][url] = jumpURL;
+                                invalidateTimer = setTimeout(invalidate, REFRESH_INTERVAL);
                             }
                             
-                            deferred.resolve(jumpURL);
+                            deferred.resolve({
+                                kulerURL: url,
+                                jumpURL: jumpURL,
+                                invalidate: invalidate
+                            });
                         }).fail(function (err) {
                             deferred.reject(err);
                         });
@@ -215,7 +250,7 @@ define(function (require, exports, module) {
     // Public API
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
-    exports.getThemeURL         = getThemeURL;
+    exports.getThemeURLInfo     = getThemeURLInfo;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
