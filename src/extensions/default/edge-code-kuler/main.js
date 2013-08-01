@@ -50,6 +50,11 @@ define(function (require, exports, module) {
                 return null;
             }
             
+            // Do nothing if we don't have an Internet connection.  Otherwise, calls to Kuler will fail anyway.
+            if (!window.navigator.onLine) {
+                return null;
+            }
+            
             var deferred = $.Deferred(),
                 KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor),
                 inlineEditor = new KulerInlineEditor(context.color, context.start, context.end);
