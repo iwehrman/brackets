@@ -153,15 +153,16 @@ define(function (require, exports, module) {
     
     /**
      * Get URL info about Kuler theme, including a direct URL that is immediately
-     * usable if the theme is public, and a jump URL that can be used exactly once
-     * if theme is private. The jump URL will authenticate the user before redirecting
-     * to the direct URL. If a jump URL is used once, the invalidate function should
-     * be called to notify and the direct URL should be used thereafter.
+     * usable if the theme is public, and possibly also a jump URL that can be used
+     * exactly once if theme is private. The jump URL will authenticate the user before
+     * redirecting to the direct URL. If a jump URL is used once then the invalidate
+     * function must be called to ensure that it will not be used again, and the direct
+     * URL should be used thereafter.
      * 
      * @param {Object} theme - Kuler theme object
      * @return {$.Promise<{kulerURL: string, jumpURL: ?string, invalidate: Function()}>} - 
      *      a jQuery promise that resolves to the theme's URL info object, which includes
-     *      a direct URL and optionall also a jump URL and invalidation function
+     *      a direct URL and optionally also a jump URL and invalidation function
      */
     function getThemeURLInfo(theme) {
         var fullId = theme.name.replace(/\ /g, "-") + "-color-theme-" + theme.id,
@@ -195,7 +196,6 @@ define(function (require, exports, module) {
                             }
                         };
                     
-                    
                     if (jumpURL === null) {
                         // a jump url was previously fetched for this url, but it was invalidated
                         deferred.resolve({
@@ -221,6 +221,7 @@ define(function (require, exports, module) {
                             if (jumpURLCache.hasOwnProperty(token)) {
                                 jumpURLCache[token][url] = jumpURL;
                                 invalidateTimer = setTimeout(invalidate, REFRESH_INTERVAL);
+                                // TODO: fire an event to notify clients when jump URLs expire
                             }
                             
                             deferred.resolve({
