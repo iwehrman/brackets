@@ -46,11 +46,11 @@ define(function (require, exports, module) {
     }
 
     function _constructMyThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=100");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=100&metadata=all");
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler&maxNumber=100");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler&maxNumber=100&metadata=all");
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
