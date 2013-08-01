@@ -84,11 +84,10 @@ define(function (require, exports, module) {
             }
         };
     
-        KulerInlineColorEditor.prototype.load = function (hostEditor, accessToken) {
+        KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var self = this,
-                colorEditor = this.colorEditor,
+            var colorEditor = this.colorEditor,
                 kuler = kulerColorEditorTemplate(Strings),
                 $kuler = $(kuler),
                 $themes = $kuler.find(".kuler-themes"),
@@ -99,10 +98,7 @@ define(function (require, exports, module) {
                 
                 if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
-                        var htmlId = "kuler__" + theme.id;
-                        
                         theme.length = theme.swatches.length;
-                        theme.htmlId = htmlId;
 
                         var themeHTML = kulerThemeTemplate(theme),
                             $theme = $(themeHTML);
