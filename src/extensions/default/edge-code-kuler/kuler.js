@@ -26,6 +26,8 @@
 
 define(function (require, exports, module) {
     "use strict";
+    
+    var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
         KULER_RESOURCE_THEMES = "themes",
@@ -149,6 +151,36 @@ define(function (require, exports, module) {
         return _getThemes(url, refresh);
     }
     
+    function getThemeURL(theme) {
+        var fullId = theme.name.replace(/\ /g, "-") + "-color-theme-" + theme.id,
+            url = Strings.KULER_URL + "/" + fullId + "/",
+            deferred = $.Deferred();
+        
+        if (theme.access && theme.access.visibility === "public") {
+            deferred.resolve(url);
+        } else {
+            if (brackets.authentication) {
+                brackets.authentication.getAccessToken().done(function (token) {
+                    $.post("https://ims-na1.adobelogin.com/ims/jumptoken/v1", {
+                        target_client_id: "KulerWeb1",
+                        target_redirect_uri: url,
+                        bearer_token: token
+                    }).done(function (data) {
+                        deferred.resolve(data.jump);
+                    }).fail(function (err) {
+                        deferred.reject(err);
+                    });
+                }).fail(function (err) {
+                    deferred.reject(err);
+                });
+            } else {
+                deferred.reject();
+            }
+        }
+        
+        return deferred.promise();
+    }
+    
     function flushCachedThemes() {
         themesCache = {};
     }
@@ -156,6 +188,7 @@ define(function (require, exports, module) {
     // Public API
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
+    exports.getThemeURL         = getThemeURL;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
