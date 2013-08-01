@@ -84,10 +84,11 @@ define(function (require, exports, module) {
             }
         };
     
-        KulerInlineColorEditor.prototype.load = function (hostEditor) {
+        KulerInlineColorEditor.prototype.load = function (hostEditor, accessToken) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var colorEditor = this.colorEditor,
+            var self = this,
+                colorEditor = this.colorEditor,
                 kuler = kulerColorEditorTemplate(Strings),
                 $kuler = $(kuler),
                 $themes = $kuler.find(".kuler-themes"),
@@ -98,13 +99,29 @@ define(function (require, exports, module) {
                 
                 if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
-                        theme.length = theme.swatches.length;
+                        var htmlId = "kuler__" + theme.id,
+                            url = Strings.KULER_URL + "/" +
+                                theme.name.replace(/\ /g, "-") + "-color-theme-" +
+                                theme.id + "/";
                         
+                        theme.length = theme.swatches.length;
+                        theme.htmlId = htmlId;
                         // the Kuler API doesn't implement this property now but the docs
                         // say it should, so if it's ever implemented this will just work
                         if (theme.access && theme.access.visibility === "public") {
-                            theme.url = Strings.KULER_URL + "/" + theme.name.replace(/\ /g, "-") +
-                                "-color-theme-" + theme.id;
+                            theme.url = url;
+                        } else {
+                            $.post("https://ims-na1.adobelogin.com/ims/jumptoken/v1", {
+                                target_client_id: "KulerWeb1",
+                                target_redirect_uri: url,
+                                bearer_token: accessToken
+                            }).done(function (data) {
+                                theme.url = data.jump;
+                                
+                                var $theme = $(kulerThemeTemplate(theme));
+                                $theme.on("click", "a", self._handleLinkClick);
+                                $themes.find("#" + htmlId).replaceWith($theme);
+                            });
                         }
                         
                         var themeHTML = kulerThemeTemplate(theme),

@@ -54,9 +54,8 @@ define(function (require, exports, module) {
                 KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor),
                 inlineEditor = new KulerInlineEditor(context.color, context.start, context.end);
             
-            inlineEditor.load(hostEditor);
-            
-            brackets.authentication.getAuthorizedUser().done(function (user) {
+            brackets.authentication.getAccessToken().done(function (accessToken) {
+                inlineEditor.load(hostEditor, accessToken);
                 deferred.resolve(inlineEditor);
             }).fail(function (err) {
                 console.log("Authentication error: ", err);
