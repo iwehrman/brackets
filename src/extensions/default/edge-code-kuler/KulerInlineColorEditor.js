@@ -76,9 +76,9 @@ define(function (require, exports, module) {
             }
             
             // We need to block the event from both the host CodeMirror code (by stopping bubbling) and the
-            // browser's native behavior (by preventing default). We preventDefault() *only* when the docs
+            // browser's native behavior (by preventing default). We preventDefault() *only* when the Kuler
             // scroller is at its limit (when an ancestor would get scrolled instead); otherwise we'd block
-            // normal scrolling of the docs themselves.
+            // normal scrolling of the Kuler themes themselves.
             event.stopPropagation();
             if (scrollingUp && scroller.scrollTop === 0) {
                 event.preventDefault();
