@@ -246,6 +246,7 @@ define(function (require, exports, module) {
     
     function flushCachedThemes() {
         themesCache = {};
+        promiseCache = {};
     }
     
     // Public API
