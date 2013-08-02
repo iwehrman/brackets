@@ -99,14 +99,7 @@ define(function (require, exports, module) {
                 if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
                         theme.length = theme.swatches.length;
-                        
-                        // the Kuler API doesn't implement this property now but the docs
-                        // say it should, so if it's ever implemented this will just work
-                        if (theme.access && theme.access.visibility === "public") {
-                            theme.url = Strings.KULER_URL + "/" + theme.name.replace(/\ /g, "-") +
-                                "-color-theme-" + theme.id;
-                        }
-                        
+
                         var themeHTML = kulerThemeTemplate(theme),
                             $theme = $(themeHTML);
                         
@@ -118,6 +111,24 @@ define(function (require, exports, module) {
                         });
                         
                         $themes.append($theme);
+                        
+                        kulerAPI.getThemeURLInfo(theme).done(function (info) {
+                            var $title = $theme.find(".kuler-swatch-title"),
+                                $anchor;
+                            
+                            if (info.jumpURL) {
+                                $title.wrap("<a href='" + info.jumpURL + "'>");
+                                $anchor = $title.parent();
+                                $anchor.one("click", function (event) {
+                                    info.invalidate();
+                                    $anchor.one("click", function () {
+                                        $anchor.attr("href", info.kulerURL);
+                                    });
+                                });
+                            } else {
+                                $title.wrap("<a href='" + info.kulerURL + "'>");
+                            }
+                        });
                     });
                     $themes.show();
                 } else {
@@ -127,7 +138,7 @@ define(function (require, exports, module) {
                 
             });
             
-            $kuler.find("a").on("click", this._handleLinkClick);
+            $kuler.on("click", "a", this._handleLinkClick);
             $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
             this.$htmlContent.append($kuler);
         };
