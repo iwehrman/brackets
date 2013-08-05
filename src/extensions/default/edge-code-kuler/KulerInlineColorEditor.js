@@ -27,8 +27,7 @@
 define(function (require, exports, module) {
     "use strict";
     
-    var ExtensionLoader         = brackets.getModule("utils/ExtensionLoader"),
-        ExtensionUtils          = brackets.getModule("utils/ExtensionUtils"),
+    var KeyEvent                = brackets.getModule("utils/KeyEvent"),
         NativeApp               = brackets.getModule("utils/NativeApp"),
         Strings                 = require("strings"),
         kulerAPI                = require("kuler");
@@ -103,7 +102,7 @@ define(function (require, exports, module) {
                         var themeHTML = kulerThemeTemplate(theme),
                             $theme = $(themeHTML);
                         
-                        $theme.find(".kuler-swatch-block").on("click", function (event) {
+                        $theme.find(".kuler-swatch-block").on("click, focus", function (event) {
                             var $swatch = $(event.target),
                                 color = $swatch.data("hex");
                             
