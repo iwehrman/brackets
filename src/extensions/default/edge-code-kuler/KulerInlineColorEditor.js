@@ -83,6 +83,10 @@ define(function (require, exports, module) {
                 event.preventDefault();
             }
         };
+        
+        KulerInlineColorEditor.prototype._handleKulerCollectionSelector = function (event) {
+            console.log("_handleKulerCollectionSelector");
+        };        
     
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
@@ -140,6 +144,8 @@ define(function (require, exports, module) {
             
             $kuler.on("click", "a", this._handleLinkClick);
             $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
+            $kuler.find(".kuler-collection-title").on("click", this._handleKulerCollectionSelector);
+
             this.$htmlContent.append($kuler);
         };
         
