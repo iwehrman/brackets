@@ -132,6 +132,36 @@ define(function (require, exports, module) {
                             $anchor.attr("tabindex", -1);
                         });
                     });
+                    
+                    var $swatchItems = colorEditor.$swatches.find("li"),
+                        $kulerSwatches = $kuler.find(".kuler-swatch-block"),
+                        firstKulerSwatch = $kulerSwatches[0],
+                        $firstKulerSwatch = $(firstKulerSwatch),
+                        $lastItem;
+                    
+                    if ($swatchItems.length > 0) {
+                        // override tab behavior of last color editor swatch, if it exists
+                        var lastItem = $swatchItems[$swatchItems.length - 1];
+                        $lastItem = $(lastItem);
+                    } else {
+                        // otherwise override the HSL button
+                        $lastItem = colorEditor.$hslButton;
+                    }
+                    
+                    $lastItem.on("keydown", function (event) {
+                        if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                            $firstKulerSwatch.focus();
+                            return false;
+                        }
+                    });
+                    
+                    $firstKulerSwatch.on("keydown", function (event) {
+                        if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                            $lastItem.focus();
+                            return false;
+                        }
+                    });
+
                     $themes.show();
                 } else {
                     $nothemes.show();
