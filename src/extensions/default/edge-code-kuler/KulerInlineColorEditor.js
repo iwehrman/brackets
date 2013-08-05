@@ -127,7 +127,10 @@ define(function (require, exports, module) {
                                 });
                             } else {
                                 $title.wrap("<a href='" + info.kulerURL + "'>");
+                                $anchor = $title.parent();
                             }
+                            
+                            $anchor.attr("tabindex", -1);
                         });
                     });
                     $themes.show();
