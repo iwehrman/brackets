@@ -91,10 +91,12 @@ define(function (require, exports, module) {
                 $kuler = $(kuler),
                 $themes = $kuler.find(".kuler-themes"),
                 $nothemes = $kuler.find(".kuler-no-themes"),
-                $loading = $kuler.find(".kuler-loading");
+                $loading = $kuler.find(".kuler-loading"),
+                $lastKulerItem = $kuler.find("a.kuler-more-info"),
+                $firstKulerItem,
+                $lastColorPickerItem;
 
             this.themesPromise.done(function (data) {
-                
                 if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
                         theme.length = theme.swatches.length;
@@ -133,41 +135,55 @@ define(function (require, exports, module) {
                         });
                     });
                     
-                    var $swatchItems = colorEditor.$swatches.find("li"),
-                        $kulerSwatches = $kuler.find(".kuler-swatch-block"),
-                        firstKulerSwatch = $kulerSwatches[0],
-                        $firstKulerSwatch = $(firstKulerSwatch),
-                        $lastItem;
-                    
-                    if ($swatchItems.length > 0) {
-                        // override tab behavior of last color editor swatch, if it exists
-                        var lastItem = $swatchItems[$swatchItems.length - 1];
-                        $lastItem = $(lastItem);
-                    } else {
-                        // otherwise override the HSL button
-                        $lastItem = colorEditor.$hslButton;
-                    }
-                    
-                    $lastItem.on("keydown", function (event) {
-                        if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
-                            $firstKulerSwatch.focus();
-                            return false;
-                        }
-                    });
-                    
-                    $firstKulerSwatch.on("keydown", function (event) {
-                        if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
-                            $lastItem.focus();
-                            return false;
-                        }
-                    });
-
+                    $firstKulerItem = $themes.find(".kuler-swatch-block").first();
                     $themes.show();
                 } else {
+                    $firstKulerItem = $lastKulerItem;
                     $nothemes.show();
                 }
-                $loading.hide();
                 
+                var $swatchItems = colorEditor.$swatches.find("li");
+                if ($swatchItems.length > 0) {
+                    // override tab behavior of last color editor swatch, if it exists
+                    $lastColorPickerItem = $swatchItems.last();
+                } else {
+                    // otherwise override the HSL button
+                    $lastColorPickerItem = colorEditor.$hslButton;
+                }
+                
+                // tab forward from last focusable color picker element to first Kuler swatch
+                $lastColorPickerItem.on("keydown", function (event) {
+                    if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                        $firstKulerItem.focus();
+                        return false;
+                    }
+                });
+                
+                // tab backward from first Kuler swatch to last focusable color picker element
+                $firstKulerItem.on("keydown", function (event) {
+                    if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                        $lastColorPickerItem.focus();
+                        return false;
+                    }
+                });
+                
+                // tab forward from more info tab to first focusable color picker element
+                $lastKulerItem.on("keydown", function (event) {
+                    if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                        colorEditor.$selectionBase.focus();
+                        return false;
+                    }
+                });
+                
+                // tab backward from first focusable color picker to element more info tab
+                colorEditor.$selectionBase.on("keydown", function (event) {
+                    if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                        $lastKulerItem.focus();
+                        return false;
+                    }
+                });
+                
+                $loading.hide();
             });
             
             $kuler.on("click", "a", this._handleLinkClick);
