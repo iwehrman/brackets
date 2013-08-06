@@ -27,17 +27,23 @@
 define(function (require, exports, module) {
     "use strict";
     
-    var ExtensionLoader         = brackets.getModule("utils/ExtensionLoader"),
+    var EditorManager           = brackets.getModule("editor/EditorManager"),
+        ExtensionLoader         = brackets.getModule("utils/ExtensionLoader"),
         ExtensionUtils          = brackets.getModule("utils/ExtensionUtils"),
+        Menus                   = brackets.getModule("command/Menus"),
         NativeApp               = brackets.getModule("utils/NativeApp"),
+        PopUpManager            = brackets.getModule("widgets/PopUpManager"),
+        
         Strings                 = require("strings"),
         kulerAPI                = require("kuler");
     
-    var _kulerColorEditorHTML    = require("text!html/KulerColorEditorTemplate.html"),
-        _kulerThemeHTML          = require("text!html/KulerThemeTemplate.html");
+    var _kulerColorEditorHTML   = require("text!html/KulerColorEditorTemplate.html"),
+        _kulerThemeHTML         = require("text!html/KulerThemeTemplate.html"),
+        _kulerMenuTemplate      = require("text!html/KulerMenu.html");
     
-    var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
-        kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML);
+    var kulerColorEditorTemplate = Mustache.compile(_kulerColorEditorHTML),
+        kulerThemeTemplate      = Mustache.compile(_kulerThemeHTML),
+        kulerMenu               = Mustache.render(_kulerMenuTemplate);
 
     function getConstructor(InlineColorEditor) {
         
@@ -46,8 +52,8 @@ define(function (require, exports, module) {
          */
         function KulerInlineColorEditor() {
             InlineColorEditor.apply(this, arguments);
-            
             this.themesPromise = kulerAPI.getMyThemes();
+            
         }
         
         KulerInlineColorEditor.prototype = Object.create(InlineColorEditor.prototype);
@@ -84,10 +90,150 @@ define(function (require, exports, module) {
             }
         };
         
-        KulerInlineColorEditor.prototype._handleKulerCollectionSelector = function (event) {
-            console.log("_handleKulerCollectionSelector");
-        };        
+        KulerInlineColorEditor.prototype._handleThemesPromise = function ($kuler, data) {
+            var $themes = $kuler.find(".kuler-themes"),
+                $nothemes = $kuler.find(".kuler-no-themes"),
+                $loading = $kuler.find(".kuler-loading"),
+                $title = $kuler.find(".title"),
+                colorEditor = this.colorEditor;
+            $themes.empty();
+            if (data.themes.length > 0) {
+                data.themes.forEach(function (theme) {
+                    theme.length = theme.swatches.length;
+
+                    var themeHTML = kulerThemeTemplate(theme),
+                        $theme = $(themeHTML);
+                    
+                    $theme.find(".kuler-swatch-block").on("click", function (event) {
+                        var $swatch = $(event.target),
+                            color = $swatch.data("hex");
+                        
+                        colorEditor.setColorFromString(color);
+                    });
+                    
+                    $themes.append($theme);
+                    
+                    kulerAPI.getThemeURLInfo(theme).done(function (info) {
+                        var $title = $theme.find(".kuler-swatch-title"),
+                            $anchor;
+                        
+                        if (info.jumpURL) {
+                            $title.wrap("<a href='" + info.jumpURL + "'>");
+                            $anchor = $title.parent();
+                            $anchor.one("click", function (event) {
+                                info.invalidate();
+                                $anchor.one("click", function () {
+                                    $anchor.attr("href", info.kulerURL);
+                                });
+                            });
+                        } else {
+                            $title.wrap("<a href='" + info.kulerURL + "'>");
+                        }
+                    });
+                });
+                $themes.show();
+            } else {
+                $nothemes.show();
+            }
+            $loading.hide();
+        };
+        
+        KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
+            var $kuler = this.$kuler,
+                $themes = this.$kuler.find(".kuler-themes"),
+                $loading = this.$kuler.find(".kuler-loading"),
+                $title = this.$kuler.find(".title"),
+                colorEditor = this.colorEditor,
+                $kulerMenuDropdown = $(kulerMenu);
+            /**
+             * Close the dropdown.
+             */
+            function closeDropdown() {
+                // Since we passed "true" for autoRemove to addPopUp(), this will
+                // automatically remove the dropdown from the DOM. Also, PopUpManager
+                // will call cleanupDropdown().
+                if ($kulerMenuDropdown) {
+                    PopUpManager.removePopUp($kulerMenuDropdown);
+                }
+            }
+            
+            /**
+             * Remove the various event handlers that close the dropdown. This is called by the
+             * PopUpManager when the dropdown is closed.
+             */
+            function cleanupDropdown() {
+                $("html").off("click", closeDropdown);
+                $("#titlebar .nav").off("click", closeDropdown);
+                codemirror.off("scroll", closeDropdown);
+                $kulerMenuDropdown = null;
+            }
+            /**
+             * Adds the click and mouse enter/leave events to the dropdown
+             */
+            function _handleListEvents() {
+                $kulerMenuDropdown.click(function (e) {
+                    var $link = $(e.target).closest("a"),
+                        kulerCollection  = $link.data("collection"),
+                        newWidth;
+                    
+                    if (kulerCollection) {
+                        $themes.hide();
+                        $loading.show();
+                        if (kulerCollection === "my-themes") {
+                            $title.text("My Kuler Themes");
+                            newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                            $kuler.find(".kuler-collection-title").css("width", newWidth);
+                            this.themesPromise = kulerAPI.getMyThemes();
+                        } else if (kulerCollection === "favorites") {
+                            $title.text("Favorites");
+                            newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                            $kuler.find(".kuler-collection-title").css("width", newWidth);
+                            this.themesPromise = kulerAPI.getFavoriteThemes();
+                        }
+                        this.themesPromise.done(KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler));
+                        closeDropdown();
+                    
+                    }
+                    
+                });
+            }
+          
+            Menus.closeAll();
+            
+            // TODO: Can't just use Bootstrap 1.4 dropdowns for this since they're hard-coded to
+            // assume that the dropdown is inside a top-level menubar created using <li>s.
+            // Have to do this stopProp to avoid the html click handler from firing when this returns.
+            e.stopPropagation();
+            
+            
+            var toggleOffset = this.$kulerMenuDropdownToggle.offset();
+            var toggleDisplay = $("#kuler-dropdown").is(':visible') ? "none" : "inline";
+            $kulerMenuDropdown
+                .css({
+                    left: toggleOffset.left,
+                    top: toggleOffset.top + this.$kulerMenuDropdownToggle.outerHeight(),
+                    display: toggleDisplay
+                })
+                .appendTo($("body"));
+            
+            PopUpManager.addPopUp($kulerMenuDropdown, cleanupDropdown, true);
+            
+            // TODO: should use capture, otherwise clicking on the menus doesn't close it. More fallout
+            // from the fact that we can't use the Boostrap (1.4) dropdowns.
+            $("html").on("click", closeDropdown);
+            
+            // close dropdown when editor scrolls
+            codemirror.on("scroll", closeDropdown);
     
+            
+            // Hacky: if we detect a click in the menubar, close ourselves.
+            // TODO: again, we should have centralized popup management.
+            $("#titlebar .nav").on("click", closeDropdown);
+            _handleListEvents();
+       
+        };
+
+        
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
@@ -97,57 +243,18 @@ define(function (require, exports, module) {
                 $themes = $kuler.find(".kuler-themes"),
                 $nothemes = $kuler.find(".kuler-no-themes"),
                 $loading = $kuler.find(".kuler-loading");
-
-            this.themesPromise.done(function (data) {
-                
-                if (data.themes.length > 0) {
-                    data.themes.forEach(function (theme) {
-                        theme.length = theme.swatches.length;
-
-                        var themeHTML = kulerThemeTemplate(theme),
-                            $theme = $(themeHTML);
-                        
-                        $theme.find(".kuler-swatch-block").on("click", function (event) {
-                            var $swatch = $(event.target),
-                                color = $swatch.data("hex");
-                            
-                            colorEditor.setColorFromString(color);
-                        });
-                        
-                        $themes.append($theme);
-                        
-                        kulerAPI.getThemeURLInfo(theme).done(function (info) {
-                            var $title = $theme.find(".kuler-swatch-title"),
-                                $anchor;
-                            
-                            if (info.jumpURL) {
-                                $title.wrap("<a href='" + info.jumpURL + "'>");
-                                $anchor = $title.parent();
-                                $anchor.one("click", function (event) {
-                                    info.invalidate();
-                                    $anchor.one("click", function () {
-                                        $anchor.attr("href", info.kulerURL);
-                                    });
-                                });
-                            } else {
-                                $title.wrap("<a href='" + info.kulerURL + "'>");
-                            }
-                        });
-                    });
-                    $themes.show();
-                } else {
-                    $nothemes.show();
-                }
-                $loading.hide();
-                
-            });
+            this.$kuler = $kuler;
+            this.themesPromise.done(this._handleThemesPromise.bind(this, this.$kuler));
             
             $kuler.on("click", "a", this._handleLinkClick);
             $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
-            $kuler.find(".kuler-collection-title").on("click", this._handleKulerCollectionSelector);
+            this.$kulerMenuDropdownToggle = $kuler.find("#kuler-dropdown-toggle")
+                .click(this._toggleKulerMenu.bind(this,
+                                                  EditorManager.getCurrentFullEditor()._codeMirror));
 
             this.$htmlContent.append($kuler);
         };
+
         
         KulerInlineColorEditor.prototype.onAdded = function () {
             KulerInlineColorEditor.prototype.parentClass.onAdded.apply(this, arguments);
