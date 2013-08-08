@@ -145,6 +145,28 @@ define(function (require, exports, module) {
                 $title = this.$kuler.find(".title"),
                 colorEditor = this.colorEditor,
                 $kulerMenuDropdown = $(kulerMenu);
+             /**
+             * Fetch My Themes and update UI
+             */
+            function getMyThemes($kuler) {
+                var $title = $kuler.find(".title");
+                $title.text("My Kuler Themes");
+                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                $kuler.find(".kuler-collection-title").css("width", newWidth);
+                return kulerAPI.getMyThemes();
+            }
+             /**
+             * Fetch Favorite themes and update UI
+             */
+            function getFavoriteThemes($kuler) {
+                var $title = $kuler.find(".title");
+                $title.text("Favorites");
+                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                $kuler.find(".kuler-collection-title").css("width", newWidth);
+                return kulerAPI.getFavoriteThemes();
+            }
+            
+            
             /**
              * Close the dropdown.
              */
@@ -180,15 +202,10 @@ define(function (require, exports, module) {
                         $themes.hide();
                         $loading.show();
                         if (kulerCollection === "my-themes") {
-                            $title.text("My Kuler Themes");
-                            newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
-                            $kuler.find(".kuler-collection-title").css("width", newWidth);
-                            this.themesPromise = kulerAPI.getMyThemes();
+                            this.themesPromise = getMyThemes($kuler);
                         } else if (kulerCollection === "favorites") {
-                            $title.text("Favorites");
-                            newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
-                            $kuler.find(".kuler-collection-title").css("width", newWidth);
-                            this.themesPromise = kulerAPI.getFavoriteThemes();
+                            this.themesPromise = getFavoriteThemes($kuler);
+
                         }
                         this.themesPromise.done(KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler));
                         closeDropdown();
