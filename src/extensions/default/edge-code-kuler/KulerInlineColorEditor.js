@@ -114,22 +114,13 @@ define(function (require, exports, module) {
                         
                         $themes.append($theme);
                         
-                        kulerAPI.getThemeURLInfo(theme).done(function (info) {
-                            var $title = $theme.find(".kuler-swatch-title"),
-                                $anchor;
-                            
-                            if (info.jumpURL) {
-                                $title.wrap("<a href='" + info.jumpURL + "'>");
-                                $anchor = $title.parent();
-                                $anchor.one("click", function (event) {
-                                    info.invalidate();
-                                    $anchor.one("click", function () {
-                                        $anchor.attr("href", info.kulerURL);
-                                    });
-                                });
-                            } else {
-                                $title.wrap("<a href='" + info.kulerURL + "'>");
-                            }
+                        kulerAPI.getThemeURLInfo(theme).done(function (getUrl) {
+                            var $title = $theme.find(".kuler-swatch-title");
+                            $title.wrap("<a href='#'>");
+                            $title.parent().on("click", function () {
+                                NativeApp.openURLInDefaultBrowser(getUrl());
+                                return false;
+                            });
                         });
                     });
                     $themes.show();
