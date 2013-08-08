@@ -104,11 +104,16 @@ define(function (require, exports, module) {
                         var themeHTML = kulerThemeTemplate(theme),
                             $theme = $(themeHTML);
                         
-                        $theme.find(".kuler-swatch-block").on("click, focus", function (event) {
-                            var $swatch = $(event.target),
-                                color = $swatch.data("hex");
-                            
-                            colorEditor.setColorFromString(color);
+                        $theme.find(".kuler-swatch-block").on("click, keydown", function (event) {
+                            if (event.type !== "keydown" ||
+                                    event.keyCode === KeyEvent.DOM_VK_ENTER ||
+                                    event.keyCode === KeyEvent.DOM_VK_RETURN) {
+                                
+                                var $swatch = $(event.target),
+                                    color = $swatch.data("hex");
+                                
+                                colorEditor.setColorFromString(color);
+                            }
                         });
                         
                         $themes.append($theme);
