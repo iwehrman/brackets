@@ -52,7 +52,7 @@ define(function (require, exports, module) {
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler&maxNumber=100&metadata=all");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=likes&maxNumber=100&metadata=all");
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
