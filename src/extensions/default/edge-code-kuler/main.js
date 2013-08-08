@@ -55,28 +55,35 @@ define(function (require, exports, module) {
                 return null;
             }
             
-            var deferred = $.Deferred(),
-                KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor, tinycolor),
-                inlineEditor = new KulerInlineEditor(context.color, context.start, context.end);
-            
-            inlineEditor.load(hostEditor);
+            var KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor, tinycolor),
+                kulerEditor = new KulerInlineEditor(context.color, context.start, context.end),
+                kulerDeferred = $.Deferred(),
+                inlineEditorDeferred = $.Deferred();
             
             brackets.authentication.getAuthorizedUser().done(function (user) {
-                deferred.resolve(inlineEditor);
+                kulerEditor.load(hostEditor).done(function () {
+                    kulerDeferred.resolve();
+                }).fail(function (err) {
+                    kulerDeferred.reject(err);
+                });
             }).fail(function (err) {
-                console.log("Authentication error: ", err);
+                kulerDeferred.reject(err);
+            });
+            
+            kulerDeferred.done(function () {
+                inlineEditorDeferred.resolve(kulerEditor);
+            }).fail(function (err) {
+                console.warn("Unable to load Kuler editor", err);
                 
                 // EditorManager ought to pick another provider when the promise
                 // rejects, but instead it just fails silently. As a workaround,
                 // we instead return our own instance of InlineColorEditor. 
-                //deferred.reject();
-                
-                inlineEditor = new InlineColorEditor(context.color, context.start, context.end);
-                inlineEditor.load(hostEditor);
-                deferred.resolve(inlineEditor);
+                var colorEditor = new InlineColorEditor(context.color, context.start, context.end);
+                colorEditor.load(hostEditor);
+                inlineEditorDeferred.resolve(colorEditor);
             });
-            
-            return deferred.promise();
+
+            return inlineEditorDeferred.promise();
         }, 1);
     }
 

@@ -91,7 +91,9 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var colorEditor = this.colorEditor,
+            var deferred = $.Deferred(),
+                colorEditor = this.colorEditor,
+                $htmlContent = this.$htmlContent,
                 kuler = kulerColorEditorTemplate(Strings),
                 $kuler = $(kuler),
                 $themes = $kuler.find(".kuler-themes"),
@@ -132,35 +134,30 @@ define(function (require, exports, module) {
                         
                         $themes.append($theme);
                         
-                        kulerAPI.getThemeURLInfo(theme).done(function (info) {
-                            var $title = $theme.find(".kuler-swatch-title"),
-                                $anchor;
-                            
-                            if (info.jumpURL) {
-                                $title.wrap("<a href='" + info.jumpURL + "'>");
-                                $anchor = $title.parent();
-                                $anchor.one("click", function (event) {
-                                    info.invalidate();
-                                    $anchor.one("click", function () {
-                                        $anchor.attr("href", info.kulerURL);
-                                    });
-                                });
-                            } else {
-                                $title.wrap("<a href='" + info.kulerURL + "'>");
-                            }
+                        kulerAPI.getThemeURLInfo(theme).done(function (getUrl) {
+                            var $title = $theme.find(".kuler-swatch-title");
+                            $title.wrap("<a href='#'>");
+                            $title.parent().on("click", function () {
+                                NativeApp.openURLInDefaultBrowser(getUrl());
+                                return false;
+                            });
                         });
                     });
                     $themes.show();
                 } else {
                     $nothemes.show();
                 }
-                $loading.hide();
                 
+                $loading.hide();
+                $kuler.on("click", "a", this._handleLinkClick);
+                $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
+                $htmlContent.append($kuler);
+                deferred.resolve();
+            }).fail(function (err) {
+                deferred.reject(err);
             });
             
-            $kuler.on("click", "a", this._handleLinkClick);
-            $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
-            this.$htmlContent.append($kuler);
+            return deferred.promise();
         };
         
         KulerInlineColorEditor.prototype.onAdded = function () {
