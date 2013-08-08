@@ -145,9 +145,11 @@ define(function (require, exports, module) {
                 $title = this.$kuler.find(".title"),
                 colorEditor = this.colorEditor,
                 $kulerMenuDropdown = $(kulerMenu);
-             /**
+
+            /**
              * Fetch My Themes and update UI
-             */
+             * @return {promise} - a promise that resolves when the themes have been fetched 
+             */           
             function getMyThemes($kuler) {
                 var $title = $kuler.find(".title");
                 $title.text("My Kuler Themes");
@@ -157,6 +159,7 @@ define(function (require, exports, module) {
             }
              /**
              * Fetch Favorite themes and update UI
+             * @return {promise} - a promise that resolves when the themes have been fetched              
              */
             function getFavoriteThemes($kuler) {
                 var $title = $kuler.find(".title");
