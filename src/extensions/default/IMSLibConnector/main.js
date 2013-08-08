@@ -102,9 +102,6 @@ define(function (require, exports, module) {
                                 accessToken: accessToken,
                                 authorizedUser: authorizedUser
                             };
-
-                            // clear the cached promise
-                            authStatusDeferred = null;
                             
                             // invalidate and refresh the cached status once the token expires
                             authStatusTimer = window.setTimeout(function () {
@@ -143,7 +140,14 @@ define(function (require, exports, module) {
             // cached status or if a refresh has been forced; otherwise immediately
             // resolve with the cached information
             if (!authStatusCache || forceRefresh) {
+                // request new authStatus from IMSLib
                 getAuthStatusHelper();
+                
+                // clear the cached promise once the request is complete
+                deferred.aways(function () {
+                    authStatusDeferred = null;
+                });
+
             } else {
                 deferred.resolve(authStatusCache);
             }
