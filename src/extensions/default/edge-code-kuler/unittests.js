@@ -120,7 +120,7 @@ define(function (require, exports, module) {
             it("should return proper request url for my favorites", function () {
                 var myFavoritesUrl = Kuler._constructMyFavoritesRequestURL();
 
-                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=my_kuler&maxNumber=100&metadata=all");
+                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=likes&maxNumber=100&metadata=all");
             });
         });
 

@@ -22,7 +22,7 @@
  */
 
 /*jslint vars: true, plusplus: true, nomen: true, regexp: true, maxerr: 50 */
-/*global define, brackets, $, window, tinycolor, Mustache */
+/*global define, brackets, $, window, tinycolor, Mustache, tinycolor */
 
 define(function (require, exports, module) {
     "use strict";
@@ -31,14 +31,18 @@ define(function (require, exports, module) {
         NativeApp               = brackets.getModule("utils/NativeApp"),
         Strings                 = require("strings"),
         kulerAPI                = require("kuler");
-    
+        
     var _kulerColorEditorHTML    = require("text!html/KulerColorEditorTemplate.html"),
         _kulerThemeHTML          = require("text!html/KulerThemeTemplate.html");
     
     var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
         kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML);
-
-    function getConstructor(InlineColorEditor) {
+    
+    var tinycolor;
+    
+    function getConstructor(InlineColorEditor, _tinycolor) {
+        
+        tinycolor = _tinycolor;
         
         /**
          * @contructor
@@ -71,9 +75,9 @@ define(function (require, exports, module) {
             }
             
             // We need to block the event from both the host CodeMirror code (by stopping bubbling) and the
-            // browser's native behavior (by preventing default). We preventDefault() *only* when the docs
+            // browser's native behavior (by preventing default). We preventDefault() *only* when the Kuler
             // scroller is at its limit (when an ancestor would get scrolled instead); otherwise we'd block
-            // normal scrolling of the docs themselves.
+            // normal scrolling of the Kuler themes themselves.
             event.stopPropagation();
             if (scrollingUp && scroller.scrollTop === 0) {
                 event.preventDefault();
@@ -86,7 +90,9 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var colorEditor = this.colorEditor,
+            var deferred = $.Deferred(),
+                colorEditor = this.colorEditor,
+                $htmlContent = this.$htmlContent,
                 kuler = kulerColorEditorTemplate(Strings),
                 $kuler = $(kuler),
                 $themes = $kuler.find(".kuler-themes"),
@@ -99,8 +105,15 @@ define(function (require, exports, module) {
             this.themesPromise.done(function (data) {
                 if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
+                        theme.swatches.forEach(function (swatch) {
+                            var color = tinycolor(swatch.hex);
+                            swatch.hex = color.toHexString();
+                            swatch.rgb = color.toRgbString();
+                            swatch.hsl = color.toHslString();
+                        });
+                        
                         theme.length = theme.swatches.length;
-
+                        
                         var themeHTML = kulerThemeTemplate(theme),
                             $theme = $(themeHTML);
                         
@@ -108,34 +121,34 @@ define(function (require, exports, module) {
                             if (event.type !== "keydown" ||
                                     event.keyCode === KeyEvent.DOM_VK_ENTER ||
                                     event.keyCode === KeyEvent.DOM_VK_RETURN) {
+                                var $selected = colorEditor.$buttonList.find(".selected"),
+                                    $swatch = $(event.target),
+                                    colorString;
                                 
-                                var $swatch = $(event.target),
-                                    color = $swatch.data("hex");
+                                if ($selected.find(".rgba").length) {
+                                    colorString = $swatch.data("rgb");
+                                } else if ($selected.find(".hsla").length) {
+                                    colorString = $swatch.data("hsl");
+                                } else {
+                                    colorString = $swatch.data("hex");
+                                }
                                 
-                                colorEditor.setColorFromString(color);
+                                colorEditor.setColorFromString(colorString);
                             }
                         });
                         
                         $themes.append($theme);
                         
-                        kulerAPI.getThemeURLInfo(theme).done(function (info) {
+                        kulerAPI.getThemeURLInfo(theme).done(function (getUrl) {
                             var $title = $theme.find(".kuler-swatch-title"),
                                 $anchor;
                             
-                            if (info.jumpURL) {
-                                $title.wrap("<a href='" + info.jumpURL + "'>");
-                                $anchor = $title.parent();
-                                $anchor.one("click", function (event) {
-                                    info.invalidate();
-                                    $anchor.one("click", function () {
-                                        $anchor.attr("href", info.kulerURL);
-                                    });
-                                });
-                            } else {
-                                $title.wrap("<a href='" + info.kulerURL + "'>");
-                                $anchor = $title.parent();
-                            }
-                            
+                            $title.wrap("<a href='#'>");
+                            $anchor = $title.parent();
+                            $anchor.on("click", function () {
+                                NativeApp.openURLInDefaultBrowser(getUrl());
+                                return false;
+                            });
                             $anchor.attr("tabindex", -1);
                         });
                     });
@@ -189,11 +202,15 @@ define(function (require, exports, module) {
                 });
                 
                 $loading.hide();
+                $kuler.on("click", "a", this._handleLinkClick);
+                $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
+                $htmlContent.append($kuler);
+                deferred.resolve();
+            }).fail(function (err) {
+                deferred.reject(err);
             });
             
-            $kuler.on("click", "a", this._handleLinkClick);
-            $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
-            this.$htmlContent.append($kuler);
+            return deferred.promise();
         };
         
         KulerInlineColorEditor.prototype.onAdded = function () {
