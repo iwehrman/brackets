@@ -22,7 +22,7 @@
  */
 
 /*jslint vars: true, plusplus: true, nomen: true, regexp: true, maxerr: 50 */
-/*global define, brackets, $, window, tinycolor, Mustache */
+/*global define, brackets, $, window, tinycolor, Mustache, tinycolor */
 
 define(function (require, exports, module) {
     "use strict";
@@ -32,14 +32,18 @@ define(function (require, exports, module) {
         NativeApp               = brackets.getModule("utils/NativeApp"),
         Strings                 = require("strings"),
         kulerAPI                = require("kuler");
-    
+        
     var _kulerColorEditorHTML    = require("text!html/KulerColorEditorTemplate.html"),
         _kulerThemeHTML          = require("text!html/KulerThemeTemplate.html");
     
     var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
         kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML);
-
-    function getConstructor(InlineColorEditor) {
+    
+    var tinycolor;
+    
+    function getConstructor(InlineColorEditor, _tinycolor) {
+        
+        tinycolor = _tinycolor;
         
         /**
          * @contructor
@@ -72,9 +76,9 @@ define(function (require, exports, module) {
             }
             
             // We need to block the event from both the host CodeMirror code (by stopping bubbling) and the
-            // browser's native behavior (by preventing default). We preventDefault() *only* when the docs
+            // browser's native behavior (by preventing default). We preventDefault() *only* when the Kuler
             // scroller is at its limit (when an ancestor would get scrolled instead); otherwise we'd block
-            // normal scrolling of the docs themselves.
+            // normal scrolling of the Kuler themes themselves.
             event.stopPropagation();
             if (scrollingUp && scroller.scrollTop === 0) {
                 event.preventDefault();
@@ -100,16 +104,32 @@ define(function (require, exports, module) {
                 
                 if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
+                        theme.swatches.forEach(function (swatch) {
+                            var color = tinycolor(swatch.hex);
+                            swatch.hex = color.toHexString();
+                            swatch.rgb = color.toRgbString();
+                            swatch.hsl = color.toHslString();
+                        });
+                        
                         theme.length = theme.swatches.length;
-
+                        
                         var themeHTML = kulerThemeTemplate(theme),
                             $theme = $(themeHTML);
                         
                         $theme.find(".kuler-swatch-block").on("click", function (event) {
-                            var $swatch = $(event.target),
-                                color = $swatch.data("hex");
+                            var $selected = colorEditor.$buttonList.find(".selected"),
+                                $swatch = $(event.target),
+                                colorString;
                             
-                            colorEditor.setColorFromString(color);
+                            if ($selected.find(".rgba").length) {
+                                colorString = $swatch.data("rgb");
+                            } else if ($selected.find(".hsla").length) {
+                                colorString = $swatch.data("hsl");
+                            } else {
+                                colorString = $swatch.data("hex");
+                            }
+                            
+                            colorEditor.setColorFromString(colorString);
                         });
                         
                         $themes.append($theme);
