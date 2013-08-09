@@ -56,7 +56,7 @@ define(function (require, exports, module) {
     }
     
     function _constructRandomThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=50&metadata=all&sort=random");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=100&metadata=all&sort=random");
     }    
 
     function _prepareKulerRequest(kulerUrl, accessToken) {

@@ -22,7 +22,7 @@
  */
 
 /*jslint vars: true, plusplus: true, nomen: true, regexp: true, maxerr: 50 */
-/*global define, brackets, $, window, tinycolor, Mustache, tinycolor */
+/*global define, brackets, $, window, Mustache, tinycolor */
 
 define(function (require, exports, module) {
     "use strict";
@@ -98,7 +98,10 @@ define(function (require, exports, module) {
                 event.preventDefault();
             }
         };
-        
+        /**
+         * build the color swatch matrix and attach event handlers
+         * @return {boolean} - returns false if there are no swatches, true otherwise              
+         */
         KulerInlineColorEditor.prototype._handleThemesPromise = function ($kuler, data) {
             var $themes = $kuler.find(".kuler-themes"),
                 $nothemes = $kuler.find(".kuler-no-themes"),
@@ -118,12 +121,7 @@ define(function (require, exports, module) {
                         swatch.hsl = color.toHslString();
                     });
                     
-                    theme.length = theme.swatches.length;
-                    
-                    var themeHTML = kulerThemeTemplate(theme),
-                        $theme = $(themeHTML);
-                    
-                    $theme.find(".kuler-swatch-block").on("click, keydown", function (event) {
+                    function handleSwatchAction(event) {
                         if (event.type !== "keydown" ||
                                 event.keyCode === KeyEvent.DOM_VK_ENTER ||
                                 event.keyCode === KeyEvent.DOM_VK_RETURN) {
@@ -141,7 +139,15 @@ define(function (require, exports, module) {
                             
                             colorEditor.setColorFromString(colorString);
                         }
-                    });
+                    }
+                    
+                    theme.length = theme.swatches.length;
+                    
+                    var themeHTML = kulerThemeTemplate(theme),
+                        $theme = $(themeHTML);
+                    
+                    $theme.find(".kuler-swatch-block").on("click", handleSwatchAction);
+                    $theme.find(".kuler-swatch-block").on("keydown", handleSwatchAction);
                     
                     $themes.append($theme);
                     
@@ -254,7 +260,7 @@ define(function (require, exports, module) {
                         } else if (kulerCollection === "random-themes") {
                             this.themesPromise = getRandomThemes($kuler);
                         }
-                        var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler),
+                        var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(self, $kuler),
                             that = self;
                         this.themesPromise.done(function (data) {
                             if (boundThemesHandler(data)) {
@@ -265,7 +271,6 @@ define(function (require, exports, module) {
                     
                         });
                         closeDropdown();
-                    
                     }
                     
                 });
@@ -279,11 +284,13 @@ define(function (require, exports, module) {
             e.stopPropagation();
             
             
-            var toggleOffset = this.$kulerMenuDropdownToggle.offset();
-            var toggleDisplay = $("#kuler-dropdown").is(':visible') ? "none" : "inline";
+            var toggleOffset = this.$kulerMenuDropdownToggle.offset(),
+                leftOffset = toggleOffset.left - 24,
+                toggleDisplay = $("#kuler-dropdown").is(':visible') ? "none" : "inline";
+            
             $kulerMenuDropdown
                 .css({
-                    left: toggleOffset.left,
+                    left: leftOffset,
                     top: toggleOffset.top + this.$kulerMenuDropdownToggle.outerHeight(),
                     display: toggleDisplay
                 })
@@ -310,7 +317,8 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var deferred = $.Deferred(),
+            var self = this,
+                deferred = $.Deferred(),
                 colorEditor = this.colorEditor,
                 $htmlContent = this.$htmlContent,
                 kuler = kulerColorEditorTemplate(Strings),
@@ -325,7 +333,6 @@ define(function (require, exports, module) {
             this.$kuler = $kuler;
             this.$lastKulerItem = $lastKulerItem;
             this.$firstKulerItem = $firstKulerItem;
-            var self = this;
             this.themesPromise
                 .done(function (data) {
                     if (self._handleThemesPromise(self.$kuler, data)) {

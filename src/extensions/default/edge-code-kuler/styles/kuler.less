@@ -3,6 +3,7 @@
 @emphasized-text-color: #454545;
 @heading-color: #454545;
 @link-color: #0083e8;
+@tc-light-weight-text: rgba(224, 240, 250, 1);
 
 /* Typography */
 @font-weight-semibold: 500;
@@ -20,6 +21,41 @@
     font-weight: 400;
     color: @body-text-color;
 }
+
+
+// trying to colorize the kuler links on hover - start
+
+.kuler-dropdown-menu {
+    border-radius: 3px;
+    box-shadow: 0 3px 9px rgba(0, 0, 0, .3);
+    border: none;
+    position: absolute;
+    display: block;
+    max-width: none;
+    z-index: 100;
+    
+    li {
+        list-style-type: none;
+        border-radius: 3px;
+    }
+    
+    .kuler-link {
+        white-space: nowrap;
+        background: white;
+        color: @emphasized-text-color;
+        display: block;
+        padding: 5px 26px 5px 15px;
+        text-decoration: none;
+        border-radius: 3px;
+        &:hover {
+            background: @tc-light-weight-text;
+            text-decoration: none;
+            color: @emphasized-text-color;
+        }
+    }    
+}
+
+// trying to colorize the kuler links on hover - end
 
 // Used to avoid overlapping CM scrollbar - TODO (#3460): need a cleaner way to do this
 @scrollbar-wid: 17px;
