@@ -31,6 +31,7 @@ define(function (require, exports, module) {
         ExtensionLoader         = brackets.getModule("utils/ExtensionLoader"),
         ExtensionUtils          = brackets.getModule("utils/ExtensionUtils"),
         Menus                   = brackets.getModule("command/Menus"),
+        KeyEvent                = brackets.getModule("utils/KeyEvent"),
         NativeApp               = brackets.getModule("utils/NativeApp"),
         PopUpManager            = brackets.getModule("widgets/PopUpManager"),
         
@@ -58,6 +59,9 @@ define(function (require, exports, module) {
         function KulerInlineColorEditor() {
             InlineColorEditor.apply(this, arguments);
             this.themesPromise = kulerAPI.getMyThemes();
+            // warm up the cache.
+            kulerAPI.getRandomThemes();
+            kulerAPI.getFavoriteThemes();
             
         }
         
@@ -100,23 +104,29 @@ define(function (require, exports, module) {
                 $nothemes = $kuler.find(".kuler-no-themes"),
                 $loading = $kuler.find(".kuler-loading"),
                 $title = $kuler.find(".title"),
-                colorEditor = this.colorEditor;
+                colorEditor = this.colorEditor,
+                returnVal = false;
+                  
+            
             $themes.empty();
             if (data.themes.length > 0) {
-                    data.themes.forEach(function (theme) {
-                        theme.swatches.forEach(function (swatch) {
-                            var color = tinycolor(swatch.hex);
-                            swatch.hex = color.toHexString();
-                            swatch.rgb = color.toRgbString();
-                            swatch.hsl = color.toHslString();
-                        });
-                        
-                        theme.length = theme.swatches.length;
-                        
-                        var themeHTML = kulerThemeTemplate(theme),
-                            $theme = $(themeHTML);
-                        
-                        $theme.find(".kuler-swatch-block").on("click", function (event) {
+                data.themes.forEach(function (theme) {
+                    theme.swatches.forEach(function (swatch) {
+                        var color = tinycolor(swatch.hex);
+                        swatch.hex = color.toHexString();
+                        swatch.rgb = color.toRgbString();
+                        swatch.hsl = color.toHslString();
+                    });
+                    
+                    theme.length = theme.swatches.length;
+                    
+                    var themeHTML = kulerThemeTemplate(theme),
+                        $theme = $(themeHTML);
+                    
+                    $theme.find(".kuler-swatch-block").on("click, keydown", function (event) {
+                        if (event.type !== "keydown" ||
+                                event.keyCode === KeyEvent.DOM_VK_ENTER ||
+                                event.keyCode === KeyEvent.DOM_VK_RETURN) {
                             var $selected = colorEditor.$buttonList.find(".selected"),
                                 $swatch = $(event.target),
                                 colorString;
@@ -130,24 +140,33 @@ define(function (require, exports, module) {
                             }
                             
                             colorEditor.setColorFromString(colorString);
-                        });
-                        
-                        $themes.append($theme);
-                        
-                        kulerAPI.getThemeURLInfo(theme).done(function (getUrl) {
-                            var $title = $theme.find(".kuler-swatch-title");
-                            $title.wrap("<a href='#'>");
-                            $title.parent().on("click", function () {
-                                NativeApp.openURLInDefaultBrowser(getUrl());
-                                return false;
-                            });
-                        });
+                        }
                     });
-                    $themes.show();
-                } else {
-                    $nothemes.show();
-                }
+                    
+                    $themes.append($theme);
+                    
+                    kulerAPI.getThemeURLInfo(theme).done(function (getUrl) {
+                        var $title = $theme.find(".kuler-swatch-title"),
+                            $anchor;
+                        
+                        $title.wrap("<a href='#'>");
+                        $anchor = $title.parent();
+                        $anchor.on("click", function () {
+                            NativeApp.openURLInDefaultBrowser(getUrl());
+                            return false;
+                        });
+                        $anchor.attr("tabindex", -1);
+                    });
+                });
+                returnVal = true;
+                $themes.show();
+            } else {
+                returnVal = false;
+                $nothemes.show();
+            }
+
             $loading.hide();
+            return returnVal;
         };
         
         KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
@@ -156,7 +175,8 @@ define(function (require, exports, module) {
                 $loading = this.$kuler.find(".kuler-loading"),
                 $title = this.$kuler.find(".title"),
                 colorEditor = this.colorEditor,
-                $kulerMenuDropdown = $(kulerMenu);
+                $kulerMenuDropdown = $(kulerMenu),
+                self = this;
 
             /**
              * Fetch My Themes and update UI
@@ -191,9 +211,7 @@ define(function (require, exports, module) {
                 var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
                 $kuler.find(".kuler-collection-title").css("width", newWidth);
                 return kulerAPI.getRandomThemes(true);
-            }            
-            
-            
+            }
             
             /**
              * Close the dropdown.
@@ -236,7 +254,16 @@ define(function (require, exports, module) {
                         } else if (kulerCollection === "random-themes") {
                             this.themesPromise = getRandomThemes($kuler);
                         }
-                        this.themesPromise.done(KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler));
+                        var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler),
+                            that = self;
+                        this.themesPromise.done(function (data) {
+                            if (boundThemesHandler(data)) {
+                                that.$firstKulerItem = $themes.find(".kuler-swatch-block").first();
+                            } else {
+                                that.$firstKulerItem = that.$lastKulerItem;
+                            }
+                    
+                        });
                         closeDropdown();
                     
                     }
@@ -290,13 +317,64 @@ define(function (require, exports, module) {
                 $kuler = $(kuler),
                 $themes = $kuler.find(".kuler-themes"),
                 $nothemes = $kuler.find(".kuler-no-themes"),
-                $loading = $kuler.find(".kuler-loading");
+                $loading = $kuler.find(".kuler-loading"),
+                $lastKulerItem = $kuler.find("a.kuler-more-info"),
+                $firstKulerItem,
+                $lastColorPickerItem;
 
             this.$kuler = $kuler;
+            this.$lastKulerItem = $lastKulerItem;
+            this.$firstKulerItem = $firstKulerItem;
             var self = this;
             this.themesPromise
-                .done(function(data){
-                    self._handleThemesPromise(self.$kuler, data);
+                .done(function (data) {
+                    if (self._handleThemesPromise(self.$kuler, data)) {
+                        self.$firstKulerItem = $themes.find(".kuler-swatch-block").first();
+                    } else {
+                        self.$firstKulerItem = self.$lastKulerItem;
+                    }
+                    
+                    var $swatchItems = colorEditor.$swatches.find("li");
+                    if ($swatchItems.length > 0) {
+                        // override tab behavior of last color editor swatch, if it exists
+                        $lastColorPickerItem = $swatchItems.last();
+                    } else {
+                        // otherwise override the HSL button
+                        $lastColorPickerItem = colorEditor.$hslButton;
+                    }
+                    
+                    // tab forward from last focusable color picker element to first Kuler swatch
+                    $lastColorPickerItem.on("keydown", function (event) {
+                        if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                            self.$firstKulerItem.focus();
+                            return false;
+                        }
+                    });
+                    
+                    // tab backward from first Kuler swatch to last focusable color picker element
+                    self.$firstKulerItem.on("keydown", function (event) {
+                        if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                            $lastColorPickerItem.focus();
+                            return false;
+                        }
+                    });
+                    
+                    // tab forward from more info tab to first focusable color picker element
+                    self.$lastKulerItem.on("keydown", function (event) {
+                        if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                            colorEditor.$selectionBase.focus();
+                            return false;
+                        }
+                    });
+                    
+                    // tab backward from first focusable color picker to element more info tab
+                    colorEditor.$selectionBase.on("keydown", function (event) {
+                        if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                            self.$lastKulerItem.focus();
+                            return false;
+                        }
+                    });
+                                            
                     $kuler.on("click", "a", self._handleLinkClick);
                     $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll);
                     self.$kulerMenuDropdownToggle = $kuler.find("#kuler-dropdown-toggle")
@@ -310,7 +388,7 @@ define(function (require, exports, module) {
                 });
             
 
-            return deferred.promise();            
+            return deferred.promise();
         };
 
         
