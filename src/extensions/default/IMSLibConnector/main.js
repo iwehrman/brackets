@@ -144,7 +144,7 @@ define(function (require, exports, module) {
                 getAuthStatusHelper();
                 
                 // clear the cached promise once the request is complete
-                deferred.aways(function () {
+                deferred.always(function () {
                     authStatusDeferred = null;
                 });
 
