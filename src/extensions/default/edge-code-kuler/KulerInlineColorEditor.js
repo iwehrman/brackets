@@ -91,7 +91,8 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var deferred = $.Deferred(),
+            var self = this,
+                deferred = $.Deferred(),
                 colorEditor = this.colorEditor,
                 $htmlContent = this.$htmlContent,
                 kuler = kulerColorEditorTemplate(Strings),
@@ -149,8 +150,8 @@ define(function (require, exports, module) {
                 }
                 
                 $loading.hide();
-                $kuler.on("click", "a", this._handleLinkClick);
-                $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
+                $kuler.on("click", "a", self._handleLinkClick);
+                $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll);
                 $htmlContent.append($kuler);
                 deferred.resolve();
             }).fail(function (err) {
