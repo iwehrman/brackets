@@ -27,31 +27,38 @@
 define(function (require, exports, module) {
     "use strict";
     
-    var ExtensionLoader         = brackets.getModule("utils/ExtensionLoader"),
+    var EditorManager           = brackets.getModule("editor/EditorManager"),
+        ExtensionLoader         = brackets.getModule("utils/ExtensionLoader"),
         ExtensionUtils          = brackets.getModule("utils/ExtensionUtils"),
+        Menus                   = brackets.getModule("command/Menus"),
         NativeApp               = brackets.getModule("utils/NativeApp"),
+        PopUpManager            = brackets.getModule("widgets/PopUpManager"),
+        
         Strings                 = require("strings"),
         kulerAPI                = require("kuler");
         
     var _kulerColorEditorHTML    = require("text!html/KulerColorEditorTemplate.html"),
-        _kulerThemeHTML          = require("text!html/KulerThemeTemplate.html");
+        _kulerThemeHTML          = require("text!html/KulerThemeTemplate.html"),
+        _kulerMenuTemplate       = require("text!html/KulerMenu.html");
     
-    var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
-        kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML);
+    
+    var kulerColorEditorTemplate = Mustache.compile(_kulerColorEditorHTML),
+        kulerThemeTemplate      = Mustache.compile(_kulerThemeHTML),
+        kulerMenu               = Mustache.render(_kulerMenuTemplate);
     
     var tinycolor;
     
     function getConstructor(InlineColorEditor, _tinycolor) {
         
         tinycolor = _tinycolor;
-        
+
         /**
          * @contructor
          */
         function KulerInlineColorEditor() {
             InlineColorEditor.apply(this, arguments);
-            
             this.themesPromise = kulerAPI.getMyThemes();
+            
         }
         
         KulerInlineColorEditor.prototype = Object.create(InlineColorEditor.prototype);
@@ -87,22 +94,15 @@ define(function (require, exports, module) {
                 event.preventDefault();
             }
         };
-    
-        KulerInlineColorEditor.prototype.load = function (hostEditor) {
-            KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
-            
-            var deferred = $.Deferred(),
-                colorEditor = this.colorEditor,
-                $htmlContent = this.$htmlContent,
-                kuler = kulerColorEditorTemplate(Strings),
-                $kuler = $(kuler),
-                $themes = $kuler.find(".kuler-themes"),
+        
+        KulerInlineColorEditor.prototype._handleThemesPromise = function ($kuler, data) {
+            var $themes = $kuler.find(".kuler-themes"),
                 $nothemes = $kuler.find(".kuler-no-themes"),
-                $loading = $kuler.find(".kuler-loading");
-
-            this.themesPromise.done(function (data) {
-                
-                if (data.themes.length > 0) {
+                $loading = $kuler.find(".kuler-loading"),
+                $title = $kuler.find(".title"),
+                colorEditor = this.colorEditor;
+            $themes.empty();
+            if (data.themes.length > 0) {
                     data.themes.forEach(function (theme) {
                         theme.swatches.forEach(function (swatch) {
                             var color = tinycolor(swatch.hex);
@@ -147,18 +147,158 @@ define(function (require, exports, module) {
                 } else {
                     $nothemes.show();
                 }
-                
-                $loading.hide();
-                $kuler.on("click", "a", this._handleLinkClick);
-                $kuler.find(".kuler-scroller").on("mousewheel", this._handleWheelScroll);
-                $htmlContent.append($kuler);
-                deferred.resolve();
-            }).fail(function (err) {
-                deferred.reject(err);
-            });
-            
-            return deferred.promise();
+            $loading.hide();
         };
+        
+        KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
+            var $kuler = this.$kuler,
+                $themes = this.$kuler.find(".kuler-themes"),
+                $loading = this.$kuler.find(".kuler-loading"),
+                $title = this.$kuler.find(".title"),
+                colorEditor = this.colorEditor,
+                $kulerMenuDropdown = $(kulerMenu);
+
+            /**
+             * Fetch My Themes and update UI
+             * @return {promise} - a promise that resolves when the themes have been fetched 
+             */
+            function getMyThemes($kuler) {
+                var $title = $kuler.find(".title");
+                $title.text("My Kuler Themes");
+                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                $kuler.find(".kuler-collection-title").css("width", newWidth);
+                return kulerAPI.getMyThemes();
+            }
+             /**
+             * Fetch Favorite themes and update UI
+             * @return {promise} - a promise that resolves when the themes have been fetched              
+             */
+            function getFavoriteThemes($kuler) {
+                var $title = $kuler.find(".title");
+                $title.text("Favorites");
+                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                $kuler.find(".kuler-collection-title").css("width", newWidth);
+                return kulerAPI.getFavoriteThemes();
+            }
+            
+            
+            /**
+             * Close the dropdown.
+             */
+            function closeDropdown() {
+                // Since we passed "true" for autoRemove to addPopUp(), this will
+                // automatically remove the dropdown from the DOM. Also, PopUpManager
+                // will call cleanupDropdown().
+                if ($kulerMenuDropdown) {
+                    PopUpManager.removePopUp($kulerMenuDropdown);
+                }
+            }
+            
+            /**
+             * Remove the various event handlers that close the dropdown. This is called by the
+             * PopUpManager when the dropdown is closed.
+             */
+            function cleanupDropdown() {
+                $("html").off("click", closeDropdown);
+                $("#titlebar .nav").off("click", closeDropdown);
+                codemirror.off("scroll", closeDropdown);
+                $kulerMenuDropdown = null;
+            }
+            /**
+             * Adds the click and mouse enter/leave events to the dropdown
+             */
+            function _handleListEvents() {
+                $kulerMenuDropdown.click(function (e) {
+                    var $link = $(e.target).closest("a"),
+                        kulerCollection  = $link.data("collection"),
+                        newWidth;
+                    
+                    if (kulerCollection) {
+                        $themes.hide();
+                        $loading.show();
+                        if (kulerCollection === "my-themes") {
+                            this.themesPromise = getMyThemes($kuler);
+                        } else if (kulerCollection === "favorites") {
+                            this.themesPromise = getFavoriteThemes($kuler);
+
+                        }
+                        this.themesPromise.done(KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler));
+                        closeDropdown();
+                    
+                    }
+                    
+                });
+            }
+          
+            Menus.closeAll();
+            
+            // TODO: Can't just use Bootstrap 1.4 dropdowns for this since they're hard-coded to
+            // assume that the dropdown is inside a top-level menubar created using <li>s.
+            // Have to do this stopProp to avoid the html click handler from firing when this returns.
+            e.stopPropagation();
+            
+            
+            var toggleOffset = this.$kulerMenuDropdownToggle.offset();
+            var toggleDisplay = $("#kuler-dropdown").is(':visible') ? "none" : "inline";
+            $kulerMenuDropdown
+                .css({
+                    left: toggleOffset.left,
+                    top: toggleOffset.top + this.$kulerMenuDropdownToggle.outerHeight(),
+                    display: toggleDisplay
+                })
+                .appendTo($("body"));
+            
+            PopUpManager.addPopUp($kulerMenuDropdown, cleanupDropdown, true);
+            
+            // TODO: should use capture, otherwise clicking on the menus doesn't close it. More fallout
+            // from the fact that we can't use the Boostrap (1.4) dropdowns.
+            $("html").on("click", closeDropdown);
+            
+            // close dropdown when editor scrolls
+            codemirror.on("scroll", closeDropdown);
+    
+            
+            // Hacky: if we detect a click in the menubar, close ourselves.
+            // TODO: again, we should have centralized popup management.
+            $("#titlebar .nav").on("click", closeDropdown);
+            _handleListEvents();
+       
+        };
+
+        
+        KulerInlineColorEditor.prototype.load = function (hostEditor) {
+            KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
+            
+            var deferred = $.Deferred(),
+                colorEditor = this.colorEditor,
+                $htmlContent = this.$htmlContent,
+                kuler = kulerColorEditorTemplate(Strings),
+                $kuler = $(kuler),
+                $themes = $kuler.find(".kuler-themes"),
+                $nothemes = $kuler.find(".kuler-no-themes"),
+                $loading = $kuler.find(".kuler-loading");
+
+            this.$kuler = $kuler;
+            var self = this;
+            this.themesPromise
+                .done(function(data){
+                    self._handleThemesPromise(self.$kuler, data);
+                    $kuler.on("click", "a", self._handleLinkClick);
+                    $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll);
+                    self.$kulerMenuDropdownToggle = $kuler.find("#kuler-dropdown-toggle")
+                        .click(self._toggleKulerMenu.bind(self, EditorManager.getCurrentFullEditor()._codeMirror));
+        
+                    self.$htmlContent.append($kuler);
+                    deferred.resolve();
+                })
+                .fail(function (err) {
+                    deferred.reject(err);
+                });
+            
+
+            return deferred.promise();            
+        };
+
         
         KulerInlineColorEditor.prototype.onAdded = function () {
             KulerInlineColorEditor.prototype.parentClass.onAdded.apply(this, arguments);
