@@ -27,6 +27,8 @@
 define(function (require, exports, module) {
     "use strict";
     
+    var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
+    
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
@@ -36,12 +38,79 @@ define(function (require, exports, module) {
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
         AUTH_HEADER = "Bearer {{accesstoken}}",
+        PREFS_URLS_KEY = "KULER_URLS",
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
 
-    var themesCache = {},
+    var prefs = PreferencesManager.getPreferenceStorage(module),
+        themesCache = {},
         promiseCache = {},
         timers = {},
         jumpURLCache = {};
+    
+    /*
+     * Load the set of cached themes URLs from the prefs. Each URL in the set
+     * is a key in the preferences module at which a themes object is found.
+     *
+     * @return {Object.<string:bool>} A set of URLs.
+     */
+    function _loadCachedThemesURLsFromPrefs() {
+        var urlsObj;
+        try {
+            var urlsJSON = prefs.getValue(PREFS_URLS_KEY);
+            urlsObj = JSON.parse(urlsJSON);
+        } catch (e) {
+            urlsObj = {};
+            prefs.setValue(PREFS_URLS_KEY, urlsObj);
+        }
+        return urlsObj;
+    }
+    
+    /**
+     * Load all the themes saved in the prefs into the themesCache
+     */
+    function loadCachedThemesFromPrefs() {
+        var urlObj = _loadCachedThemesURLsFromPrefs(),
+            urls = Object.keys(urlObj);
+        
+        urls.forEach(function (url) {
+            try {
+                var themesJSON  = prefs.getValue(url),
+                    themesObj   = JSON.parse(themesJSON);
+                
+                themesCache[url] = themesObj;
+            } catch (e) {
+                prefs.remove(url);
+            }
+        });
+    }
+    
+    /*
+     * Saves a themesObj, keyed by the url from whence it came, in the prefs.
+     * 
+     * @param {string} url - from whence the themesObj came
+     * @param {Object} themesObj - a themesObj from the Kuler REST API
+     */
+    function _storeCachedThemesToPrefs(url, themesObj) {
+        var urlsObj = _loadCachedThemesURLsFromPrefs();
+        
+        urlsObj[url] = true;
+        prefs.setValue(PREFS_URLS_KEY, JSON.stringify(urlsObj));
+        prefs.setValue(url, JSON.stringify(themesObj));
+    }
+    
+    /*
+     * Remove all saved themes objects from the prefs.
+     */
+    function _flushCachedThemesFromPrefs() {
+        var urlsObj = _loadCachedThemesURLsFromPrefs(),
+            urls = Object.key(urlsObj);
+        
+        urls.forEach(function (url) {
+            prefs.remove(url);
+        });
+        
+        prefs.setValue(PREFS_URLS_KEY, {});
+    }
 
     function _constructKulerURL(resource, queryParams) {
         return Mustache.render(KULER_PRODUCTION_URL, {"resource" : resource, "queryparams" : queryParams});
@@ -116,8 +185,11 @@ define(function (require, exports, module) {
                 });
                 
                 promise.done(function (data) {
-                    // promise fulfilled.  Cache the updated themes.
+                    // promise fulfilled. Cache the updated themes.
                     themesCache[url] = data;
+                    
+                    // save the theme in the prefs for offline use
+                    _storeCachedThemesToPrefs(url, data);
                 });
                 
                 return promise;
@@ -250,13 +322,15 @@ define(function (require, exports, module) {
     function flushCachedThemes() {
         themesCache = {};
         promiseCache = {};
+        _flushCachedThemesFromPrefs();
     }
     
     // Public API
-    exports.getMyThemes         = getMyThemes;
-    exports.getFavoriteThemes   = getFavoriteThemes;
-    exports.getThemeURLInfo     = getThemeURLInfo;
-    exports.flushCachedThemes   = flushCachedThemes;
+    exports.getMyThemes                 = getMyThemes;
+    exports.getFavoriteThemes           = getFavoriteThemes;
+    exports.getThemeURLInfo             = getThemeURLInfo;
+    exports.flushCachedThemes           = flushCachedThemes;
+    exports.loadCachedThemesFromPrefs   = loadCachedThemesFromPrefs;
 
     // for testing purpose
     exports._constructKulerURL              = _constructKulerURL;
