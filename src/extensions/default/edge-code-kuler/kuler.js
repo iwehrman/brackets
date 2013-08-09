@@ -54,6 +54,10 @@ define(function (require, exports, module) {
     function _constructMyFavoritesRequestURL() {
         return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=likes&maxNumber=100&metadata=all");
     }
+    
+    function _constructRandomThemesRequestURL() {
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=50&metadata=all&sort=random");
+    }    
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
         var headers = {
@@ -149,6 +153,12 @@ define(function (require, exports, module) {
         var url = _constructMyFavoritesRequestURL();
         
         return _getThemes(url, refresh);
+    }
+    
+    function getRandomThemes(refresh) {
+        var url = _constructRandomThemesRequestURL();
+        
+        return _getThemes(url, refresh);        
     }
     
     /**
@@ -255,11 +265,13 @@ define(function (require, exports, module) {
     // Public API
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
+    exports.getRandomThemes     = getRandomThemes;    
     exports.getThemeURLInfo     = getThemeURLInfo;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
     exports._constructKulerURL              = _constructKulerURL;
     exports._constructMyThemesRequestURL    = _constructMyThemesRequestURL;
+    exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;    
     exports._constructMyFavoritesRequestURL = _constructMyFavoritesRequestURL;
 });

@@ -181,6 +181,19 @@ define(function (require, exports, module) {
                 return kulerAPI.getFavoriteThemes();
             }
             
+             /**
+             * Fetch Favorite themes and update UI
+             * @return {promise} - a promise that resolves when the themes have been fetched              
+             */
+            function getRandomThemes($kuler) {
+                var $title = $kuler.find(".title");
+                $title.text("Random Kuler Themes");
+                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
+                $kuler.find(".kuler-collection-title").css("width", newWidth);
+                return kulerAPI.getRandomThemes(true);
+            }            
+            
+            
             
             /**
              * Close the dropdown.
@@ -220,7 +233,8 @@ define(function (require, exports, module) {
                             this.themesPromise = getMyThemes($kuler);
                         } else if (kulerCollection === "favorites") {
                             this.themesPromise = getFavoriteThemes($kuler);
-
+                        } else if (kulerCollection === "random-themes") {
+                            this.themesPromise = getRandomThemes($kuler);
                         }
                         this.themesPromise.done(KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler));
                         closeDropdown();
