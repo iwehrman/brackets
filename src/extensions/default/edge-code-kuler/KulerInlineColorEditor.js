@@ -22,7 +22,7 @@
  */
 
 /*jslint vars: true, plusplus: true, nomen: true, regexp: true, maxerr: 50 */
-/*global define, brackets, $, window, tinycolor, Mustache, tinycolor */
+/*global define, brackets, $, window, Mustache, tinycolor */
 
 define(function (require, exports, module) {
     "use strict";
@@ -254,7 +254,7 @@ define(function (require, exports, module) {
                         } else if (kulerCollection === "random-themes") {
                             this.themesPromise = getRandomThemes($kuler);
                         }
-                        var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(this, $kuler),
+                        var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(self, $kuler),
                             that = self;
                         this.themesPromise.done(function (data) {
                             if (boundThemesHandler(data)) {
