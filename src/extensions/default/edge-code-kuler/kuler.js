@@ -55,6 +55,8 @@ define(function (require, exports, module) {
         return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=likes&maxNumber=60&metadata=all");
     }
     
+    // TODO due to https://github.com/adobe/brackets/issues/4758 the number of themes fetched may not be bigger than 60
+    // Otehrwise the scrollbar leaves an artifact on screen when it is being hidden.
     function _constructRandomThemesRequestURL() {
         return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=60&metadata=all&sort=random");
     }    
