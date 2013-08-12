@@ -28,7 +28,7 @@ define(function (require, exports, module) {
     "use strict";
 
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils");
-    
+
     var authStatus = {"countryCode" : "US",
                           "displayName" : "Joe Average",
                           "email" : "joe.average@adobe.com",
@@ -42,19 +42,19 @@ define(function (require, exports, module) {
                           "expires_in" : "673768632",
                           "refresh_token" : "hghjkdfhj",
                           "token_type" : "bearer"};
-    
+
     var authStatusJSON = JSON.stringify(authStatus);
-    
+
     var badAuthStatusJSON = "!@#" + authStatusJSON;
 
     describe("Creative Cloud IMSLib Integration", function () {
         describe("Return valid information for logged in user", function () {
-            
+
             var testWindow,
                 brackets,
                 IMSConnector,
                 extensionRequire;
-            
+
             beforeEach(function () {
                 runs(function () {
                     SpecRunnerUtils.createTestWindowAndRun(this, function (w) {
@@ -73,7 +73,7 @@ define(function (require, exports, module) {
                     waitsForDone(IMSConnector._getAuthStatus(), "Cache warm-up");
                 });
             });
-            
+
             afterEach(function () {
                 SpecRunnerUtils.closeTestWindow(testWindow);
                 IMSConnector = null;
@@ -148,14 +148,14 @@ define(function (require, exports, module) {
                     });
 
                     promise = brackets.authentication.getAccessToken(true);
-                    
+
                     promise.fail(function (testErrorObject) {
                         errorObject = testErrorObject;
                     });
 
                     waitsForFail(promise, "Get access token");
                 });
-                
+
                 runs(function () {
                     expect(errorObject).toBeTruthy();
                 });
@@ -215,7 +215,7 @@ define(function (require, exports, module) {
 
                     waitsForFail(promise, "Get authorized user info");
                 });
-                
+
                 runs(function () {
                     expect(errorObject).toBeTruthy();
                 });
@@ -276,6 +276,58 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     expect(accessToken).toEqual(authStatus.access_token);
+                });
+            });
+
+            it("should not return an access token if the IMSLib call needed too many retries to provide a result", function () {
+                var promise,
+                    timesCalled = 0,
+                    maxRetries = 5;
+
+                runs(function () {
+                    spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
+                        if (timesCalled <= maxRetries) {
+                            timesCalled++;
+                            callback(IMS_CALL_PENDING);
+                        }
+                    });
+
+                    promise = brackets.authentication.getAuthorizedUser(true);
+
+                    waitsForFail(promise, "Could not get access token");
+                });
+            });
+
+            it("should return access token after first call to getAuthorizedUser returns from IMSLib", function () {
+                var promiseCall1,
+                    promiseCall2,
+                    timesCalled = 0;
+
+                // call 1st time and get back a promise that will be cached until the call resolves the promise.
+                // 2nd call will get the cached promise until the 1st call resolves this promise
+
+                runs(function () {
+                    spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
+                        console.log('getAU called');
+                        waits(2000000);
+//                        callback(IMS_NO_ERROR, authStatusJSON);
+//                        if (timesCalled <= maxRetries) {
+//                            timesCalled++;
+//                            callback(IMS_CALL_PENDING);
+//                        }
+                    });
+
+                    promiseCall1 = IMSConnector._getAuthStatus(true);
+                    promiseCall2 = IMSConnector._getAuthStatus(true);
+
+                    expect(promiseCall1).toBe(promiseCall2);
+
+                    waitsForDone(promiseCall1, "Waiting for call 1 to finish", 5000);
+                    waitsForDone(promiseCall2, "Waiting for call 2 to finish", 5000);
+                });
+
+                runs(function () {
+
                 });
             });
         });
