@@ -36,7 +36,6 @@
     
     li {
         list-style-type: none;
-        border-radius: 3px;
     }
     
     .kuler-link {
@@ -46,13 +45,23 @@
         display: block;
         padding: 5px 26px 5px 15px;
         text-decoration: none;
-        border-radius: 3px;
+        
         &:hover {
             background: @tc-light-weight-text;
             text-decoration: none;
             color: @emphasized-text-color;
-        }
-    }    
+        }        
+    }
+    
+    .my-themes {
+        border-top-left-radius: 3px;
+        border-top-right-radius: 3px;
+    }
+    
+    .random-themes {
+        border-bottom-right-radius: 3px;
+        border-bottom-left-radius: 3px;
+    }  
 }
 
 // trying to colorize the kuler links on hover - end
@@ -95,7 +104,8 @@
         white-space: nowrap;
         width: 127px;
         position: relative;
-        left: -6px;        
+        left: -6px;  
+        top: -5px;
         &:hover {
             padding: 4px;
             border: 1px solid #9c9e9e;
@@ -110,6 +120,7 @@
         height: 9px;
         margin-left: 4px;
         background-image: url("down-arrow.svg");
+        background-repeat:no-repeat;
         padding-bottom: 1px;
     }    
     

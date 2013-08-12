@@ -38,16 +38,18 @@ define(function (require, exports, module) {
         Strings                 = require("strings"),
         kulerAPI                = require("kuler");
         
-    var _kulerColorEditorHTML    = require("text!html/KulerColorEditorTemplate.html"),
-        _kulerThemeHTML          = require("text!html/KulerThemeTemplate.html"),
-        _kulerMenuTemplate       = require("text!html/KulerMenu.html");
+    var _kulerColorEditorHTML   = require("text!html/KulerColorEditorTemplate.html"),
+        _kulerThemeHTML         = require("text!html/KulerThemeTemplate.html"),
+        kulerMenu               = require("text!html/KulerMenu.html");
     
     
     var kulerColorEditorTemplate = Mustache.compile(_kulerColorEditorHTML),
-        kulerThemeTemplate      = Mustache.compile(_kulerThemeHTML),
-        kulerMenu               = Mustache.render(_kulerMenuTemplate);
+        kulerThemeTemplate      = Mustache.compile(_kulerThemeHTML);
     
-    var tinycolor;
+    var tinycolor,
+        FAVORITES = "Favorites",
+        RANDOM_THEMES = "Random Kuler Themes",
+        MY_THEMES = "My Kuler Themes";
     
     function getConstructor(InlineColorEditor, _tinycolor) {
         
@@ -59,10 +61,6 @@ define(function (require, exports, module) {
         function KulerInlineColorEditor() {
             InlineColorEditor.apply(this, arguments);
             this.themesPromise = kulerAPI.getMyThemes();
-            // warm up the cache.
-            kulerAPI.getRandomThemes();
-            kulerAPI.getFavoriteThemes();
-            
         }
         
         KulerInlineColorEditor.prototype = Object.create(InlineColorEditor.prototype);
@@ -103,10 +101,10 @@ define(function (require, exports, module) {
          * @return {boolean} - returns false if there are no swatches, true otherwise              
          */
         KulerInlineColorEditor.prototype._handleThemesPromise = function ($kuler, data) {
-            var $themes = $kuler.find(".kuler-themes"),
-                $nothemes = $kuler.find(".kuler-no-themes"),
-                $loading = $kuler.find(".kuler-loading"),
-                $title = $kuler.find(".title"),
+            var $themes = this.$kuler.find(".kuler-themes"),
+                $nothemes = this.$kuler.find(".kuler-no-themes"),
+                $loading = this.$kuler.find(".kuler-loading"),
+                $title = this.$kuler.find(".title"),
                 colorEditor = this.colorEditor,
                 returnVal = false;
                   
@@ -146,8 +144,7 @@ define(function (require, exports, module) {
                     var themeHTML = kulerThemeTemplate(theme),
                         $theme = $(themeHTML);
                     
-                    $theme.find(".kuler-swatch-block").on("click", handleSwatchAction);
-                    $theme.find(".kuler-swatch-block").on("keydown", handleSwatchAction);
+                    $theme.find(".kuler-swatch-block").on("keydown click", handleSwatchAction);
                     
                     $themes.append($theme);
                     
@@ -176,47 +173,29 @@ define(function (require, exports, module) {
         };
         
         KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
-            var $kuler = this.$kuler,
-                $themes = this.$kuler.find(".kuler-themes"),
-                $loading = this.$kuler.find(".kuler-loading"),
-                $title = this.$kuler.find(".title"),
-                colorEditor = this.colorEditor,
-                $kulerMenuDropdown = $(kulerMenu),
-                self = this;
+            var $kuler              = this.$kuler,
+                $themes             = this.$themes,
+                $loading            = this.$themes,
+                $title              = this.$title,
+                colorEditor         = this.colorEditor,
+                $kulerMenuDropdown  = $(kulerMenu),
+                self                = this;
 
             /**
              * Fetch My Themes and update UI
              * @return {promise} - a promise that resolves when the themes have been fetched 
              */
-            function getMyThemes($kuler) {
-                var $title = $kuler.find(".title");
-                $title.text("My Kuler Themes");
+            function getThemes($kuler, collectionName) {
+                $title.text(collectionName);
                 var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
                 $kuler.find(".kuler-collection-title").css("width", newWidth);
-                return kulerAPI.getMyThemes();
-            }
-             /**
-             * Fetch Favorite themes and update UI
-             * @return {promise} - a promise that resolves when the themes have been fetched              
-             */
-            function getFavoriteThemes($kuler) {
-                var $title = $kuler.find(".title");
-                $title.text("Favorites");
-                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
-                $kuler.find(".kuler-collection-title").css("width", newWidth);
-                return kulerAPI.getFavoriteThemes();
-            }
-            
-             /**
-             * Fetch Favorite themes and update UI
-             * @return {promise} - a promise that resolves when the themes have been fetched              
-             */
-            function getRandomThemes($kuler) {
-                var $title = $kuler.find(".title");
-                $title.text("Random Kuler Themes");
-                var newWidth = $title.width() + $kuler.find(".dropdown-arrow").width() + 8;
-                $kuler.find(".kuler-collection-title").css("width", newWidth);
-                return kulerAPI.getRandomThemes(true);
+                if (collectionName === MY_THEMES) {
+                    return kulerAPI.getMyThemes();
+                } else if (collectionName === FAVORITES) {
+                    return kulerAPI.getFavoriteThemes();
+                } else if (collectionName === RANDOM_THEMES) {
+                    return kulerAPI.getRandomThemes(true);
+                }
             }
             
             /**
@@ -253,12 +232,12 @@ define(function (require, exports, module) {
                     if (kulerCollection) {
                         $themes.hide();
                         $loading.show();
-                        if (kulerCollection === "my-themes") {
-                            this.themesPromise = getMyThemes($kuler);
-                        } else if (kulerCollection === "favorites") {
-                            this.themesPromise = getFavoriteThemes($kuler);
-                        } else if (kulerCollection === "random-themes") {
-                            this.themesPromise = getRandomThemes($kuler);
+                        if (kulerCollection === MY_THEMES) {
+                            this.themesPromise = getThemes($kuler, MY_THEMES);
+                        } else if (kulerCollection === FAVORITES) {
+                            this.themesPromise = getThemes($kuler, FAVORITES);
+                        } else if (kulerCollection === RANDOM_THEMES) {
+                            this.themesPromise = getThemes($kuler, RANDOM_THEMES);
                         }
                         var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(self, $kuler),
                             that = self;
@@ -318,19 +297,24 @@ define(function (require, exports, module) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
             var self = this,
-                deferred = $.Deferred(),
-                colorEditor = this.colorEditor,
-                $htmlContent = this.$htmlContent,
-                kuler = kulerColorEditorTemplate(Strings),
-                $kuler = $(kuler),
-                $themes = $kuler.find(".kuler-themes"),
-                $nothemes = $kuler.find(".kuler-no-themes"),
-                $loading = $kuler.find(".kuler-loading"),
-                $lastKulerItem = $kuler.find("a.kuler-more-info"),
+                deferred        = $.Deferred(),
+                colorEditor     = this.colorEditor,
+                $htmlContent    = this.$htmlContent,
+                kuler           = kulerColorEditorTemplate(Strings),
+                $kuler          = $(kuler),
+                $themes         = $kuler.find(".kuler-themes"),
+                $nothemes       = $kuler.find(".kuler-no-themes"),
+                $loading        = $kuler.find(".kuler-loading"),
+                $title          = $kuler.find(".title"),
+                $lastKulerItem  = $kuler.find("a.kuler-more-info"),
                 $firstKulerItem,
                 $lastColorPickerItem;
 
             this.$kuler = $kuler;
+            this.$themes = $themes;
+            this.$loading = $loading;
+            this.$title = $title;
+            
             this.$lastKulerItem = $lastKulerItem;
             this.$firstKulerItem = $firstKulerItem;
             this.themesPromise
