@@ -175,7 +175,7 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
             var $kuler              = this.$kuler,
                 $themes             = this.$themes,
-                $loading            = this.$themes,
+                $loading            = this.$loading,
                 $title              = this.$title,
                 colorEditor         = this.colorEditor,
                 $kulerMenuDropdown  = $(kulerMenu),
@@ -307,7 +307,6 @@ define(function (require, exports, module) {
                 $loading        = $kuler.find(".kuler-loading"),
                 $title          = $kuler.find(".title"),
                 $lastKulerItem  = $kuler.find("a.kuler-more-info"),
-                $firstKulerItem,
                 $lastColorPickerItem;
 
             this.$kuler = $kuler;
@@ -316,7 +315,6 @@ define(function (require, exports, module) {
             this.$title = $title;
             
             this.$lastKulerItem = $lastKulerItem;
-            this.$firstKulerItem = $firstKulerItem;
             this.themesPromise
                 .done(function (data) {
                     if (self._handleThemesPromise(self.$kuler, data)) {
