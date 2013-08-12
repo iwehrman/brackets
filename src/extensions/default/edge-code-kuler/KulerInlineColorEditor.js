@@ -79,6 +79,10 @@ define(function (require, exports, module) {
             var scrollingUp = (event.originalEvent.wheelDeltaY > 0),
                 scroller = event.currentTarget;
             
+            if (this.$kulerMenuDropdown) {
+                PopUpManager.removePopUp(this.$kulerMenu);
+            }
+            
             // If content has no scrollbar, let host editor scroll normally
             if (scroller.clientHeight >= scroller.scrollHeight) {
                 return;
@@ -178,7 +182,7 @@ define(function (require, exports, module) {
                 $loading            = this.$loading,
                 $title              = this.$title,
                 colorEditor         = this.colorEditor,
-                $kulerMenuDropdown  = $(kulerMenu),
+                $kulerMenuDropdown  = this.$kulerMenuDropdown,
                 self                = this;
 
             /**
@@ -313,6 +317,7 @@ define(function (require, exports, module) {
             this.$themes = $themes;
             this.$loading = $loading;
             this.$title = $title;
+            this.$kulerMenuDropdown = $(kulerMenu);
             
             this.$lastKulerItem = $lastKulerItem;
             this.themesPromise
@@ -365,7 +370,7 @@ define(function (require, exports, module) {
                     });
                                             
                     $kuler.on("click", "a", self._handleLinkClick);
-                    $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll);
+                    $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll.bind(self));
                     self.$kulerMenuDropdownToggle = $kuler.find("#kuler-dropdown-toggle")
                         .click(self._toggleKulerMenu.bind(self, EditorManager.getCurrentFullEditor()._codeMirror));
         
