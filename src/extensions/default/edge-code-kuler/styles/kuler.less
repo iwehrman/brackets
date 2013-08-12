@@ -36,9 +36,19 @@
     
     li {
         list-style-type: none;
+        
+        &:first-child a {
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+        }
+
+        &:last-child a {
+            border-bottom-left-radius: 3px;        
+            border-bottom-right-radius: 3px;
+        }
     }
     
-    .kuler-link {
+    .kuler-dropdown-link {
         white-space: nowrap;
         background: white;
         color: @emphasized-text-color;
@@ -53,15 +63,7 @@
         }        
     }
     
-    .my-themes {
-        border-top-left-radius: 3px;
-        border-top-right-radius: 3px;
-    }
     
-    .random-themes {
-        border-bottom-right-radius: 3px;
-        border-bottom-left-radius: 3px;
-    }  
 }
 
 // trying to colorize the kuler links on hover - end
@@ -114,7 +116,7 @@
         }
     }
     
-    .dropdown-arrow {
+    .kuler-dropdown-arrow {
         display: inline-block;
         width: 5px;
         height: 9px;

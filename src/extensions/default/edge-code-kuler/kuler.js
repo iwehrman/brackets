@@ -38,6 +38,11 @@ define(function (require, exports, module) {
         AUTH_HEADER = "Bearer {{accesstoken}}",
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
 
+    // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
+    // themes fetched may not be bigger than 60. Otherwise the scrollbar leaves
+    // an artifact on screen when it is being hidden.
+    var MAX_THEMES = 60;
+
     var themesCache = {},
         promiseCache = {},
         timers = {},
@@ -48,17 +53,23 @@ define(function (require, exports, module) {
     }
 
     function _constructMyThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=60&metadata=all");
+        var queryParams = "?filter=my_themes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=likes&maxNumber=60&metadata=all");
+        var queryParams = "?filter=likes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
     
-    // TODO due to https://github.com/adobe/brackets/issues/4758 the number of themes fetched may not be bigger than 60
-    // Otehrwise the scrollbar leaves an artifact on screen when it is being hidden.
     function _constructRandomThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=60&metadata=all&sort=random");
+        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=random";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+    
+    function _constructPopularThemesRequestURL() {
+        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=view_count&time=month";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
@@ -162,6 +173,13 @@ define(function (require, exports, module) {
         
         return _getThemes(url, refresh);
     }
+    
+    function getPopularThemes(refresh) {
+        var url = _constructPopularThemesRequestURL();
+        
+        return _getThemes(url, refresh);
+    }
+
     
     /**
      * Get URL info about Kuler theme in the form of a jQuery promise that resolves to a
@@ -268,12 +286,14 @@ define(function (require, exports, module) {
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
     exports.getRandomThemes     = getRandomThemes;
+    exports.getPopularThemes    = getPopularThemes;
     exports.getThemeURLInfo     = getThemeURLInfo;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
-    exports._constructKulerURL              = _constructKulerURL;
-    exports._constructMyThemesRequestURL    = _constructMyThemesRequestURL;
+    exports._constructKulerURL                  = _constructKulerURL;
+    exports._constructMyThemesRequestURL        = _constructMyThemesRequestURL;
     exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
-    exports._constructMyFavoritesRequestURL = _constructMyFavoritesRequestURL;
+    exports._constructPopularThemesRequestURL   = _constructPopularThemesRequestURL;
+    exports._constructMyFavoritesRequestURL     = _constructMyFavoritesRequestURL;
 });
