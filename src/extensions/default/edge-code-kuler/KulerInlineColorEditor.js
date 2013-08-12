@@ -47,7 +47,7 @@ define(function (require, exports, module) {
         kulerThemeTemplate      = Mustache.compile(_kulerThemeHTML);
     
     var tinycolor,
-        FAVORITES = "Favorites",
+        FAVORITES = "Favorite Kuler Themes",
         RANDOM_THEMES = "Random Kuler Themes",
         MY_THEMES = "My Kuler Themes";
     
