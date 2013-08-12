@@ -79,8 +79,8 @@ define(function (require, exports, module) {
             var scrollingUp = (event.originalEvent.wheelDeltaY > 0),
                 scroller = event.currentTarget;
             
-            if (this.$kulerMenuDropdown) {
-                PopUpManager.removePopUp(this.$kulerMenu);
+            if (this.$kulerMenuDropdown.is(':visible')) {
+                PopUpManager.removePopUp(this.$kulerMenuDropdown);
             }
             
             // If content has no scrollbar, let host editor scroll normally
@@ -183,6 +183,9 @@ define(function (require, exports, module) {
                 $title              = this.$title,
                 colorEditor         = this.colorEditor,
                 $kulerMenuDropdown  = this.$kulerMenuDropdown,
+                $favorites          = this.$kuler.find(".favorites"),
+                $myThemes           = this.$kuler.find(".my-themes"),
+                $randomThemes       = this.$kuler.find(".random-themes"),
                 self                = this;
 
             /**
@@ -258,6 +261,17 @@ define(function (require, exports, module) {
                     
                 });
             }
+            
+//            if(!$lastSelectedDropdownItem){
+//                $lastSelectedDropdownItem = $myThemes;
+//            }
+//            
+//            $lastSelectedDropdownItem.on("keydown", function (event) {
+//                if (event.keyCode === KeyEvent.DOM_VK_DOWN) {
+//                    self.$firstKulerItem.focus();
+//                    return false;
+//                }
+//            });            
           
             Menus.closeAll();
             
