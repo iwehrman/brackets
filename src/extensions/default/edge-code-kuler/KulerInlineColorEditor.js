@@ -261,18 +261,7 @@ define(function (require, exports, module) {
                     
                 });
             }
-            
-//            if(!$lastSelectedDropdownItem){
-//                $lastSelectedDropdownItem = $myThemes;
-//            }
-//            
-//            $lastSelectedDropdownItem.on("keydown", function (event) {
-//                if (event.keyCode === KeyEvent.DOM_VK_DOWN) {
-//                    self.$firstKulerItem.focus();
-//                    return false;
-//                }
-//            });            
-          
+
             Menus.closeAll();
             
             // TODO: Can't just use Bootstrap 1.4 dropdowns for this since they're hard-coded to
