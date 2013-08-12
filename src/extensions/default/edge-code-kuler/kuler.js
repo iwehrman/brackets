@@ -48,15 +48,15 @@ define(function (require, exports, module) {
     }
 
     function _constructMyThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=100&metadata=all");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=60&metadata=all");
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=likes&maxNumber=100&metadata=all");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=likes&maxNumber=60&metadata=all");
     }
     
     function _constructRandomThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=100&metadata=all&sort=random");
+        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=60&metadata=all&sort=random");
     }    
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
