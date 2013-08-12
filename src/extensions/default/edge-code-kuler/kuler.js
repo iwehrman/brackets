@@ -59,7 +59,7 @@ define(function (require, exports, module) {
     // Otehrwise the scrollbar leaves an artifact on screen when it is being hidden.
     function _constructRandomThemesRequestURL() {
         return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=public&maxNumber=60&metadata=all&sort=random");
-    }    
+    }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
         var headers = {
@@ -160,7 +160,7 @@ define(function (require, exports, module) {
     function getRandomThemes(refresh) {
         var url = _constructRandomThemesRequestURL();
         
-        return _getThemes(url, refresh);        
+        return _getThemes(url, refresh);
     }
     
     /**
@@ -267,13 +267,13 @@ define(function (require, exports, module) {
     // Public API
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
-    exports.getRandomThemes     = getRandomThemes;    
+    exports.getRandomThemes     = getRandomThemes;
     exports.getThemeURLInfo     = getThemeURLInfo;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
     exports._constructKulerURL              = _constructKulerURL;
     exports._constructMyThemesRequestURL    = _constructMyThemesRequestURL;
-    exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;    
+    exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
     exports._constructMyFavoritesRequestURL = _constructMyFavoritesRequestURL;
 });
