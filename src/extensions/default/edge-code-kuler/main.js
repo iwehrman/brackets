@@ -93,7 +93,9 @@ define(function (require, exports, module) {
         // refresh cache whenever focus returns to the window
         window.addEventListener("focus", function () {
             KulerAPI.getMyThemes(true); // force refresh
+            KulerAPI.getFavoriteThemes(true);
+            KulerAPI.getPopularThemes(true);
+            KulerAPI.getRandomThemes(true);
         });
-
     });
 });
