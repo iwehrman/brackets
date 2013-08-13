@@ -32,5 +32,7 @@ define({
 	"KULER_URL": "https://kuler.adobe.com",
 	"MANAGE_THEMES_URL": "https://kuler.adobe.com/my/themes",
 	"MY_KULER_THEMES": "Mes thèmes Kuler",
-	"FAVORITE_KULER_THEMES": "Thèmes Kuler favoris"
+	"FAVORITE_KULER_THEMES": "Thèmes Kuler favoris",
+	"POPULAR_KULER_THEMES": "[7116013] !é=Popular Kuler Themes=!",
+	"RANDOM_KULER_THEMES": "[7116014] !é=Random Kuler Themes=!"
 });
