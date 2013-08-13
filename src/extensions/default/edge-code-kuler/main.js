@@ -86,6 +86,9 @@ define(function (require, exports, module) {
         // warm up the cache
         KulerAPI.loadCachedThemesFromPrefs();
         KulerAPI.getMyThemes();
+        KulerAPI.getFavoriteThemes();
+        KulerAPI.getRandomThemes();
+        KulerAPI.getPopularThemes();
         
         // refresh cache whenever focus returns to the window
         window.addEventListener("focus", function () {
