@@ -200,7 +200,7 @@ define(function (require, exports, module) {
                 case POPULAR_THEMES:
                     return kulerAPI.getPopularThemes();
                 case RANDOM_THEMES:
-                    return kulerAPI.getRandomThemes(true);
+                    return kulerAPI.getRandomThemes();
                 default:
                     throw new Error("Unknown Kuler theme collection: " + collectionName);
                 }

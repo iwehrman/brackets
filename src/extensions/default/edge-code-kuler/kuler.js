@@ -30,14 +30,16 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
-        IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
         KULER_RESOURCE_THEMES = "themes",
-        KULER_RESOURCE_SEARCH = "search",
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
         AUTH_HEADER = "Bearer {{accesstoken}}",
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
 
+    var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
+        IMS_JUMPTOKEN_SCOPE = "openid",
+        IMS_JUMPTOKEN_RESPONSE_TYPE = "token";
+    
     // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
     // themes fetched may not be bigger than 60. Otherwise the scrollbar leaves
     // an artifact on screen when it is being hidden.
@@ -236,6 +238,8 @@ define(function (require, exports, module) {
                         // no jump URL has previously been fetched for this URL
                         // so request a new one before resolving
                         $.post(IMS_JUMPTOKEN_URL, {
+                            target_scope: IMS_JUMPTOKEN_SCOPE,
+                            target_response_type: IMS_JUMPTOKEN_RESPONSE_TYPE,
                             target_client_id: KULER_WEB_CLIENT_ID,
                             target_redirect_uri: url,
                             bearer_token: token
