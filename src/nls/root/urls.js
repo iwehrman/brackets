@@ -30,5 +30,6 @@ define({
     "ADOBE_THIRD_PARTY"         : "http://www.adobe.com/go/thirdparty/",
     "WEB_PLATFORM_DOCS_LICENSE" : "http://creativecommons.org/licenses/by/3.0/",
     "UPDATE_INFO_URL"           : "https://download.macromedia.com/pub/edgetools/code/{{level}}/en",
-    "UPDATE_DOWNLOAD_URL"       : "http://www.adobe.com/go/edgecodecc"
+    "UPDATE_DOWNLOAD_URL"       : "http://www.adobe.com/go/edgecodecc",
+    "RELEASE_NOTES_URL"         : "http://adobe.com/go/edgecode_releasenotes"
 });

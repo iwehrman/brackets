@@ -35,7 +35,8 @@ define(function (require, exports, module) {
         Commands        = require("command/Commands"),
         EditorManager   = require("editor/EditorManager"),
         Menus           = require("command/Menus"),
-        Strings         = require("strings");
+        Strings         = require("strings"),
+        Urls            = require("i18n!nls/urls");        
     
     AppInit.htmlReady(function () {
         /*
@@ -150,7 +151,7 @@ define(function (require, exports, module) {
         if (brackets.config.forum_url) {
             menu.addMenuItem(Commands.HELP_FORUM);
         }
-        if (brackets.config.release_notes_url) {
+        if (Urls.RELEASE_NOTES_URL) {
             menu.addMenuItem(Commands.HELP_RELEASE_NOTES);
         }
         if (brackets.config.report_issue_url) {
