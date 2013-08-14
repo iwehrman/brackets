@@ -30,13 +30,20 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
-        IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
         KULER_RESOURCE_THEMES = "themes",
-        KULER_RESOURCE_SEARCH = "search",
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
         AUTH_HEADER = "Bearer {{accesstoken}}",
-        REFRESH_INTERVAL = 1000 * 60 * 10; // 10 minutes
+        REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
+
+    var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
+        IMS_JUMPTOKEN_SCOPE = "openid",
+        IMS_JUMPTOKEN_RESPONSE_TYPE = "token";
+    
+    // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
+    // themes fetched may not be bigger than 60. Otherwise the scrollbar leaves
+    // an artifact on screen when it is being hidden.
+    var MAX_THEMES = 60;
 
     var themesCache = {},
         promiseCache = {},
@@ -48,11 +55,23 @@ define(function (require, exports, module) {
     }
 
     function _constructMyThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=100&metadata=all");
+        var queryParams = "?filter=my_themes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler&maxNumber=100&metadata=all");
+        var queryParams = "?filter=likes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+    
+    function _constructRandomThemesRequestURL() {
+        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=random";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+    
+    function _constructPopularThemesRequestURL() {
+        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=view_count&time=month";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
@@ -151,18 +170,28 @@ define(function (require, exports, module) {
         return _getThemes(url, refresh);
     }
     
+    function getRandomThemes(refresh) {
+        var url = _constructRandomThemesRequestURL();
+        
+        return _getThemes(url, refresh);
+    }
+    
+    function getPopularThemes(refresh) {
+        var url = _constructPopularThemesRequestURL();
+        
+        return _getThemes(url, refresh);
+    }
+
+    
     /**
-     * Get URL info about Kuler theme, including a direct URL that is immediately
-     * usable if the theme is public, and possibly also a jump URL that can be used
-     * exactly once if theme is private. The jump URL will authenticate the user before
-     * redirecting to the direct URL. If a jump URL is used once then the invalidate
-     * function must be called to ensure that it will not be used again, and the direct
-     * URL should be used thereafter.
+     * Get URL info about Kuler theme in the form of a jQuery promise that resolves to a
+     * function that produces a theme's URL. The URL can change after each request, so
+     * clients should always call the returned function before crafting a request.
      * 
      * @param {Object} theme - Kuler theme object
-     * @return {$.Promise<{kulerURL: string, jumpURL: ?string, invalidate: Function()}>} - 
-     *      a jQuery promise that resolves to the theme's URL info object, which includes
-     *      a direct URL and optionally also a jump URL and invalidation function
+     * @return {Promise.<function(): string>} - 
+     *      a jQuery promise that resolves a function that dynamically provides the correct 
+     *      URL for a theme. Clients should call this function before crafting each request.
      */
     function getThemeURLInfo(theme) {
         var fullId = theme.name.replace(/\ /g, "-") + "-color-theme-" + theme.id,
@@ -170,68 +199,76 @@ define(function (require, exports, module) {
             deferred = $.Deferred();
         
         if (theme.access && theme.access.visibility === "public") {
-            deferred.resolve({
-                kulerURL: url
+            // public themes can always use the direct URL
+            deferred.resolve(function () {
+                return url;
             });
         } else {
             if (brackets.authentication) {
                 brackets.authentication.getAccessToken().done(function (token) {
+                    /*
+                     * A function that returns the correct URL for the given theme.
+                     * If there is no cached jump URL then return the direct URL. 
+                     * Otherwise return the cached jumpURL before nullifying it, so
+                     * that it won't be returned a second time.
+                     */
+                    function getURL() {
+                        if (jumpURLCache.hasOwnProperty(token)) {
+                            if (jumpURLCache[token].hasOwnProperty(url)) {
+                                var jumpURL = jumpURLCache[token][url];
+                                if (typeof jumpURL === "string") {
+                                    // a cached jump URL exists
+                                    if (jumpURLCache.hasOwnProperty(token) && jumpURLCache[token][url]) {
+                                        // ... but a null value indicates that the jump url has
+                                        // both been generated and already used once
+                                        jumpURLCache[token][url] = null;
+                                    }
+                                    return jumpURL;
+                                }
+                            }
+                        }
+                        return url;
+                    }
+
                     if (!jumpURLCache.hasOwnProperty(token)) {
-                        // only cache jumpURLs for the most recent access token
-                        jumpURLCache = {};
                         jumpURLCache[token] = {};
                     }
                     
-                    var jumpURL = jumpURLCache[token][url],
-                        invalidateTimer = null,
-                        invalidate = function () {
-                            if (jumpURLCache.hasOwnProperty(token)) {
-                                // the null value indicates that the jump token has
-                                // already been generated and used for this token
-                                jumpURLCache[token][url] = null;
-                            }
-                            
-                            if (invalidateTimer) {
-                                clearTimeout(invalidateTimer);
-                            }
-                        };
-                    
-                    if (jumpURL === null) {
-                        // a jump url was previously fetched for this url, but it was invalidated
-                        deferred.resolve({
-                            kulerURL: url
-                        });
-                    } else if (typeof jumpURL === "string") {
-                        // an unused jump url is available in the cache
-                        deferred.resolve({
-                            kulerURL: url,
-                            jumpURL: jumpURL,
-                            invalidate: invalidate
-                        });
-                    } else {
-                        // no jump url has previously been fetched for this url
+                    if (!jumpURLCache[token].hasOwnProperty(url)) {
+                        // no jump URL has previously been fetched for this URL
+                        // so request a new one before resolving
                         $.post(IMS_JUMPTOKEN_URL, {
+                            target_scope: IMS_JUMPTOKEN_SCOPE,
+                            target_response_type: IMS_JUMPTOKEN_RESPONSE_TYPE,
                             target_client_id: KULER_WEB_CLIENT_ID,
                             target_redirect_uri: url,
                             bearer_token: token
                         }).done(function (data) {
-                            jumpURL = data.jump;
+                            var jumpURL = data.jump;
                             
                             // cache the jump URL if the token hasn't changed
                             if (jumpURLCache.hasOwnProperty(token)) {
                                 jumpURLCache[token][url] = jumpURL;
-                                invalidateTimer = setTimeout(invalidate, REFRESH_INTERVAL);
-                                // TODO: fire an event to notify clients when jump URLs expire
+                                setTimeout(function () {
+                                    // remove the cached jump URL entirely once it expires
+                                    if (jumpURLCache.hasOwnProperty(token)) {
+                                        if (jumpURLCache[token].hasOwnProperty(url)) {
+                                            delete jumpURLCache[token][url];
+                                        }
+                                        
+                                        if (Object.keys(jumpURLCache[token]).length === 0) {
+                                            delete jumpURLCache[token];
+                                        }
+                                    }
+                                }, REFRESH_INTERVAL);
                             }
                             
-                            deferred.resolve({
-                                kulerURL: url,
-                                jumpURL: jumpURL,
-                                invalidate: invalidate
-                            });
+                            deferred.resolve(getURL);
                         }).fail(function (err) {
                             deferred.reject(err);
                         });
+                    } else {
+                        deferred.resolve(getURL);
                     }
                 }).fail(function (err) {
                     deferred.reject(err);
@@ -252,11 +289,15 @@ define(function (require, exports, module) {
     // Public API
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
+    exports.getRandomThemes     = getRandomThemes;
+    exports.getPopularThemes    = getPopularThemes;
     exports.getThemeURLInfo     = getThemeURLInfo;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
-    exports._constructKulerURL              = _constructKulerURL;
-    exports._constructMyThemesRequestURL    = _constructMyThemesRequestURL;
-    exports._constructMyFavoritesRequestURL = _constructMyFavoritesRequestURL;
+    exports._constructKulerURL                  = _constructKulerURL;
+    exports._constructMyThemesRequestURL        = _constructMyThemesRequestURL;
+    exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
+    exports._constructPopularThemesRequestURL   = _constructPopularThemesRequestURL;
+    exports._constructMyFavoritesRequestURL     = _constructMyFavoritesRequestURL;
 });
