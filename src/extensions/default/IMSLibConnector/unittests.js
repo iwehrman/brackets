@@ -22,7 +22,7 @@
  */
 
 /*jslint vars: true, plusplus: true, devel: true, browser: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, describe, it, xit, expect, beforeEach, afterEach, waitsFor, runs, $, brackets, waitsForDone, waitsForFail, spyOn */
+/*global define, describe, it, xit, expect, beforeFirst, beforeEach, afterEach, afterLast, waitsFor, runs, $, brackets, waitsForDone, waitsForFail, spyOn */
 
 define(function (require, exports, module) {
     "use strict";
@@ -54,18 +54,27 @@ define(function (require, exports, module) {
                 brackets,
                 IMSConnector,
                 extensionRequire;
+            
+            beforeFirst(function () {
+                SpecRunnerUtils.createTestWindowAndRun(this, function (w) {
+                    testWindow = w;
+                    // Load module instances from brackets.test
+                    brackets = testWindow.brackets;
+                    extensionRequire = brackets.test.ExtensionLoader.getRequireContextForExtension("IMSLibConnector");
+                    IMSConnector = extensionRequire("main");
+                });
+            });
+
+            afterLast(function () {
+                SpecRunnerUtils.closeTestWindow(testWindow);
+                IMSConnector = null;
+                extensionRequire = null;
+                brackets = null;
+                testWindow = null;
+            });
+
 
             beforeEach(function () {
-                runs(function () {
-                    SpecRunnerUtils.createTestWindowAndRun(this, function (w) {
-                        testWindow = w;
-                        // Load module instances from brackets.test
-                        brackets = testWindow.brackets;
-                        extensionRequire = brackets.test.ExtensionLoader.getRequireContextForExtension("IMSLibConnector");
-                        IMSConnector = extensionRequire("main");
-                    });
-                });
-
                 runs(function () {
                     // Wait for any pending auth status promises to finish up
                     waitsForDone(IMSConnector._getAuthStatus(), "Cache warm-up");
@@ -74,14 +83,6 @@ define(function (require, exports, module) {
                 runs(function () {
                     IMSConnector._invalidateCache();
                 });
-            });
-
-            afterEach(function () {
-                SpecRunnerUtils.closeTestWindow(testWindow);
-                IMSConnector = null;
-                extensionRequire = null;
-                brackets = null;
-                testWindow = null;
             });
 
             var IMS_NO_ERROR = 0,
