@@ -23,7 +23,7 @@
 
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, brackets, $, Mustache, window */
+/*global define, brackets, $, Mustache, window, tinycolor */
 
 define(function (require, exports, module) {
     "use strict";
@@ -55,7 +55,7 @@ define(function (require, exports, module) {
                 return null;
             }
             
-            var KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor),
+            var KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor, tinycolor),
                 kulerEditor = new KulerInlineEditor(context.color, context.start, context.end),
                 kulerDeferred = $.Deferred(),
                 inlineEditorDeferred = $.Deferred();
@@ -92,17 +92,25 @@ define(function (require, exports, module) {
             mainModule = r("main"),
             InlineColorEditorModule = r("InlineColorEditor");
 
+        // load the tinycolor module from the InlineColorEditor extension
+        r("thirdparty/tinycolor-min");
+
         ExtensionUtils.loadStyleSheet(module, "styles/kuler.less");
 
         setup(mainModule.prepareEditorForProvider, InlineColorEditorModule.InlineColorEditor);
         
         // warm up the cache
         KulerAPI.getMyThemes();
+        KulerAPI.getFavoriteThemes();
+        KulerAPI.getRandomThemes();
+        KulerAPI.getPopularThemes();
         
         // refresh cache whenever focus returns to the window
         window.addEventListener("focus", function () {
             KulerAPI.getMyThemes(true); // force refresh
+            KulerAPI.getFavoriteThemes(true);
+            KulerAPI.getPopularThemes(true);
+            KulerAPI.getRandomThemes(true);
         });
-
     });
 });

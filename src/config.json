@@ -6,7 +6,6 @@
         "enable_jslint": false,
         "how_to_use_url": "http://www.adobe.com/devnet/edge-code/articles/code-editing-with-edge-code.html",
         "forum_url": "http://adobe.com/go/edge_code_forum",
-        "release_notes_url": "http://adobe.com/go/edgecode_releasenotes",
         "report_issue_url": "",
         "twitter_url": "https://twitter.com/edge_code",
         "troubleshoot_url": "http://forums.adobe.com/docs/DOC-3027",
@@ -15,8 +14,8 @@
         "extension_wiki_url": "https://github.com/adobe/brackets/wiki/Brackets-Extensions"
     },
     "name": "Edge Code",
-    "version": "0.95.0-0",
-    "apiVersion": "0.28.0",
+    "version": "0.96.0-0",
+    "apiVersion": "0.29.0",
     "homepage": "http://adobe.com/go/edgecode",
     "issues": {
         "url": "https://git.corp.adobe.com/edge/edge-code/issues"
@@ -38,7 +37,8 @@
         "grunt-contrib-watch": "0.3.1",
         "grunt-contrib-jasmine": "0.4.2",
         "grunt-template-jasmine-requirejs": "0.1.0",
-        "q": "0.9.2"
+        "q": "0.9.2",
+        "jshint": "2.1.4"
     },
     "scripts": {
         "postinstall": "grunt install",

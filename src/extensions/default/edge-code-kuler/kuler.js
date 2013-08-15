@@ -30,13 +30,20 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
-        IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
         KULER_RESOURCE_THEMES = "themes",
-        KULER_RESOURCE_SEARCH = "search",
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
         AUTH_HEADER = "Bearer {{accesstoken}}",
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
+
+    var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
+        IMS_JUMPTOKEN_SCOPE = "openid",
+        IMS_JUMPTOKEN_RESPONSE_TYPE = "token";
+    
+    // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
+    // themes fetched may not be bigger than 60. Otherwise the scrollbar leaves
+    // an artifact on screen when it is being hidden.
+    var MAX_THEMES = 60;
 
     var themesCache = {},
         promiseCache = {},
@@ -48,11 +55,23 @@ define(function (require, exports, module) {
     }
 
     function _constructMyThemesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_themes&maxNumber=100&metadata=all");
+        var queryParams = "?filter=my_themes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructMyFavoritesRequestURL() {
-        return _constructKulerURL(KULER_RESOURCE_THEMES, "?filter=my_kuler&maxNumber=100&metadata=all");
+        var queryParams = "?filter=likes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+    
+    function _constructRandomThemesRequestURL() {
+        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=random";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+    
+    function _constructPopularThemesRequestURL() {
+        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=view_count&time=month";
+        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
@@ -151,6 +170,19 @@ define(function (require, exports, module) {
         return _getThemes(url, refresh);
     }
     
+    function getRandomThemes(refresh) {
+        var url = _constructRandomThemesRequestURL();
+        
+        return _getThemes(url, refresh);
+    }
+    
+    function getPopularThemes(refresh) {
+        var url = _constructPopularThemesRequestURL();
+        
+        return _getThemes(url, refresh);
+    }
+
+    
     /**
      * Get URL info about Kuler theme in the form of a jQuery promise that resolves to a
      * function that produces a theme's URL. The URL can change after each request, so
@@ -206,6 +238,8 @@ define(function (require, exports, module) {
                         // no jump URL has previously been fetched for this URL
                         // so request a new one before resolving
                         $.post(IMS_JUMPTOKEN_URL, {
+                            target_scope: IMS_JUMPTOKEN_SCOPE,
+                            target_response_type: IMS_JUMPTOKEN_RESPONSE_TYPE,
                             target_client_id: KULER_WEB_CLIENT_ID,
                             target_redirect_uri: url,
                             bearer_token: token
@@ -255,11 +289,15 @@ define(function (require, exports, module) {
     // Public API
     exports.getMyThemes         = getMyThemes;
     exports.getFavoriteThemes   = getFavoriteThemes;
+    exports.getRandomThemes     = getRandomThemes;
+    exports.getPopularThemes    = getPopularThemes;
     exports.getThemeURLInfo     = getThemeURLInfo;
     exports.flushCachedThemes   = flushCachedThemes;
 
     // for testing purpose
-    exports._constructKulerURL              = _constructKulerURL;
-    exports._constructMyThemesRequestURL    = _constructMyThemesRequestURL;
-    exports._constructMyFavoritesRequestURL = _constructMyFavoritesRequestURL;
+    exports._constructKulerURL                  = _constructKulerURL;
+    exports._constructMyThemesRequestURL        = _constructMyThemesRequestURL;
+    exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
+    exports._constructPopularThemesRequestURL   = _constructPopularThemesRequestURL;
+    exports._constructMyFavoritesRequestURL     = _constructMyFavoritesRequestURL;
 });
