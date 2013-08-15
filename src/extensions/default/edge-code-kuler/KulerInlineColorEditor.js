@@ -391,7 +391,6 @@ define(function (require, exports, module) {
                 children = $colorEditor.children(),
                 $list = $(children[1]),
                 kulerOffset = {
-                    top: $kuler.offset().top,
                     left: $list.offset().left + $list.outerWidth() + LEFT_MARGIN
                 };
             
