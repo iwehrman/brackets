@@ -67,10 +67,12 @@ define(function (require, exports, module) {
                 });
 
                 runs(function () {
-                    IMSConnector._invalidateCache();
-
                     // Wait for any pending auth status promises to finish up
                     waitsForDone(IMSConnector._getAuthStatus(), "Cache warm-up");
+                });
+                
+                runs(function () {
+                    IMSConnector._invalidateCache();
                 });
             });
 
@@ -309,12 +311,9 @@ define(function (require, exports, module) {
                 runs(function () {
                     spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
                         console.log('getAU called');
-                        waits(2000000);
-//                        callback(IMS_NO_ERROR, authStatusJSON);
-//                        if (timesCalled <= maxRetries) {
-//                            timesCalled++;
-//                            callback(IMS_CALL_PENDING);
-//                        }
+                        setTimeout(function () {
+                            callback(IMS_NO_ERROR, authStatusJSON);
+                        }, 500);
                     });
 
                     promiseCall1 = IMSConnector._getAuthStatus(true);
