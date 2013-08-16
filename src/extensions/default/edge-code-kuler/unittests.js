@@ -114,13 +114,13 @@ define(function (require, exports, module) {
             it("should return proper request url for my themes", function () {
                 var myThemesUrl = Kuler._constructMyThemesRequestURL();
 
-                expect(myThemesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=my_themes&maxNumber=100&metadata=all");
+                expect(myThemesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=my_themes&maxNumber=60&metadata=all");
             });
 
             it("should return proper request url for my favorites", function () {
                 var myFavoritesUrl = Kuler._constructMyFavoritesRequestURL();
 
-                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=likes&maxNumber=100&metadata=all");
+                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=likes&maxNumber=60&metadata=all");
             });
         });
 

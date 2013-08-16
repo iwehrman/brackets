@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (c) 2013 Adobe Systems Incorporated. All rights reserved.
  *  
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"), 
@@ -25,14 +25,8 @@
 /*global define */
 
 define({
-	"MANAGE_THEMES": "Gérer les thèmes...",
-	"LOADING_THEMES": "Chargement des thèmes...",
-	"NO_THEMES_1": "Aucun thème à afficher.",
-	"NO_THEMES_2": "Rendez-vous sur le <a href='https://kuler.adobe.com'>site web Kuler</a> pour vous lancer.",
-	"KULER_URL": "https://kuler.adobe.com",
-	"MANAGE_THEMES_URL": "https://kuler.adobe.com/my/themes",
-	"MY_KULER_THEMES": "Mes thèmes Kuler",
-	"FAVORITE_KULER_THEMES": "Thèmes Kuler favoris",
-	"POPULAR_KULER_THEMES": "Thèmes Kuler les plus utilisés",
-	"RANDOM_KULER_THEMES": "Thèmes Kuler au hasard"
+    // Relative to the samples folder
+    "GETTING_STARTED"           : "sv/Kom igang",
+    "ADOBE_THIRD_PARTY"         : "http://www.adobe.com/go/thirdparty_sv/",
+    "WEB_PLATFORM_DOCS_LICENSE" : "http://creativecommons.org/licenses/by/3.0/deed.sv"
 });
