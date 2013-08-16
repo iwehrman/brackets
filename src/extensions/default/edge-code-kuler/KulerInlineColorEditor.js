@@ -100,6 +100,7 @@ define(function (require, exports, module) {
                 event.preventDefault();
             }
         };
+
         /**
          * build the color swatch matrix and attach event handlers
          * @return {boolean} - returns false if there are no swatches, true otherwise              
@@ -296,7 +297,7 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var self = this,
+            var self            = this,
                 deferred        = $.Deferred(),
                 colorEditor     = this.colorEditor,
                 $htmlContent    = this.$htmlContent,
@@ -377,7 +378,6 @@ define(function (require, exports, module) {
                     deferred.reject(err);
                 });
             
-
             return deferred.promise();
         };
 
