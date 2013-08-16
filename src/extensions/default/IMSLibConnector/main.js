@@ -35,7 +35,8 @@ define(function (require, exports, module) {
         IMS_ERR_CALL_PENDING = 11;
 
     // max retries when the error shell error is CALL_PENDING
-    var MAX_RETRIES = 5;
+    var MAX_RETRIES = 10,
+        MS_WAIT_UNTIL_RETRY = 100;
 
     // cached authorization status from the shell
     var authStatusCache = null,
@@ -115,7 +116,9 @@ define(function (require, exports, module) {
                             deferred.reject(parseError);
                         }
                     } else if (err === IMS_ERR_CALL_PENDING) {
-                        getAuthStatusHelper(++retryCount);
+                        window.setTimeout(function () {
+                            getAuthStatusHelper(++retryCount);
+                        }, MS_WAIT_UNTIL_RETRY);
                     } else {
                         deferred.reject(err);
                     }
