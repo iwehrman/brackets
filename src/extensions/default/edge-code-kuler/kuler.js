@@ -110,7 +110,7 @@ define(function (require, exports, module) {
      */
     function _flushCachedThemesFromPrefs() {
         var urlsObj = _loadCachedThemesURLsFromPrefs(),
-            urls = Object.key(urlsObj);
+            urls = Object.keys(urlsObj);
         
         urls.forEach(function (url) {
             prefs.remove(url);
