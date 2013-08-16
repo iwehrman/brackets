@@ -26,10 +26,11 @@
 
 define(function (require, exports, module) {
     "use strict";
-    
+
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
+        KULER_QUERY_STRING = "?filter={{filter}}&maxNumber={{maxNumber}}&metadata={{metadata}}{{{moreParams}}}",
         KULER_RESOURCE_THEMES = "themes",
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
@@ -54,24 +55,32 @@ define(function (require, exports, module) {
         return Mustache.render(KULER_PRODUCTION_URL, {"resource" : resource, "queryparams" : queryParams});
     }
 
+    function _constructQueryString(filter, metadata, moreParams) {
+        return Mustache.render(KULER_QUERY_STRING, {"filter": filter, "maxNumber": MAX_THEMES, "metadata": metadata, "moreParams": moreParams});
+    }
+
     function _constructMyThemesRequestURL() {
-        var queryParams = "?filter=my_themes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        var queryParams = _constructQueryString("my_themes", "all");
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructMyFavoritesRequestURL() {
-        var queryParams = "?filter=likes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        var queryParams = _constructQueryString("likes", "all");
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
-    
+
     function _constructRandomThemesRequestURL() {
-        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=random";
+        var queryParams = _constructQueryString("public", "all", "&sort=random");
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
-    
+
     function _constructPopularThemesRequestURL() {
-        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=view_count&time=month";
+        var queryParams = _constructQueryString("filter", "all", "&sort=view_count&time=month");
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+
+    function _executeAjaxRequest(requestConfig) {
+        return $.ajax(requestConfig);
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
@@ -80,7 +89,7 @@ define(function (require, exports, module) {
             "Authorization" : Mustache.render(AUTH_HEADER, {accesstoken : accessToken})
         };
 
-        return $.ajax({url: kulerUrl, headers : headers});
+        return exports._executeAjaxRequest({url: kulerUrl, headers : headers});
     }
 
     function _executeRequest(url) {
@@ -94,8 +103,8 @@ define(function (require, exports, module) {
 
                 jqXHR.done(function (data) {
                     deferred.resolve(data);
-                }).fail(function () {
-                    deferred.reject();
+                }).fail(function (jqXHR, textStatus, errorThrown) {
+                    deferred.reject(errorThrown);
                 });
             });
 
@@ -300,4 +309,5 @@ define(function (require, exports, module) {
     exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
     exports._constructPopularThemesRequestURL   = _constructPopularThemesRequestURL;
     exports._constructMyFavoritesRequestURL     = _constructMyFavoritesRequestURL;
+    exports._executeAjaxRequest                 = _executeAjaxRequest;
 });
