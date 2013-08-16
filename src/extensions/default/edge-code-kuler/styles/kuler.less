@@ -122,7 +122,7 @@
     .kuler-scroller {
         max-height: 179px;
         overflow-y: auto;
-        overflow-x: hidden;
+        margin-right: 18px; // prevents the scrollbar from being hidden on Windows
     }
     
     .kuler-scroller:focus {
@@ -149,11 +149,16 @@
         display: none;
         
         .kuler-theme {
-            padding: 2px 0;
+            padding: 5px 0;
             clear: both;
-            width: 10000px;
+            white-space: nowrap;
             overflow-x: hidden;
+            text-overflow: ellipsis;
             line-height: 18px ! important;
+            
+            &:first-child {
+                padding-top: 2px;
+            }
 
             .kuler-swatch-bg {
                 display: inline-block;
@@ -162,6 +167,7 @@
                 background-size: 8px;
                 width: 120px;
                 height: 20px;
+                margin-bottom: -6px;
                                     
                 .kuler-swatch {
                     position: absolute;
@@ -217,7 +223,6 @@
             a {
                 color: inherit;
                 text-decoration: none;
-                vertical-align: inherit;
                 
                 &:focus {
                     outline: none;
@@ -227,7 +232,6 @@
             }
             
             .kuler-swatch-title {
-                vertical-align: top;
                 padding-left: 5px;
                 
                 &:focus {
@@ -260,15 +264,15 @@
 a.kuler-more-info {
     position: absolute;
     bottom: 0px;
-    right: 20px;
-    padding: 4px 10px 4px 28px;
+    right: 35px;
+    padding: 4px 9px 4px 26px;
     height: 16px;
     line-height: 16px ! important;
     
     background: #e5e9e9 url("../img/kuler-icon.svg");
     background-repeat: no-repeat;
     background-size: 15px 15px;
-    background-position: 8px 5px;
+    background-position: 6px 5px;
     
     border: 1px solid #9c9e9e;
     border-radius: 3px 3px 0 0;
