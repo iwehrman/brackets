@@ -66,7 +66,8 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.constructor = KulerInlineColorEditor;
         KulerInlineColorEditor.prototype.parentClass = InlineColorEditor.prototype;
         
-        KulerInlineColorEditor.prototype._updateTitleWidth = function () {
+        // update the width of the collection title based on the content
+        KulerInlineColorEditor.prototype._updateCollectionTitleWidth = function () {
             var newWidth = this.$title.width() + this.$kuler.find(".kuler-dropdown-arrow").width() + 8;
             this.$kuler.find(".kuler-collection-title").css("width", newWidth);
         };
@@ -77,7 +78,7 @@ define(function (require, exports, module) {
          */
         KulerInlineColorEditor.prototype._getThemes = function (collectionName) {
             this.$title.text(Strings[collectionName]);
-            this._updateTitleWidth();
+            this._updateCollectionTitleWidth();
             switch (collectionName) {
             case MY_THEMES:
                 return kulerAPI.getMyThemes();
@@ -250,6 +251,9 @@ define(function (require, exports, module) {
                         $nothemes.hide();
                         $loading.show();
                         this.themesPromise.done(function (data) {
+                            // remember this collection as the last displayed
+                            kulerAPI.setLastDisplayedCollection(kulerCollection);
+                            
                             if (boundThemesHandler(data)) {
                                 self.$firstKulerItem = $themes.find(".kuler-swatch-block").first();
                             } else {
@@ -325,7 +329,9 @@ define(function (require, exports, module) {
             
             $loading.show();
             
-            this.themesPromise = self._getThemes("RANDOM_KULER_THEMES");
+            // get the last collection of themes displayed in the Kuler panel (or default to My Themes)
+            var lastDisplayedCollection = kulerAPI.getLastDisplayedCollection();
+            this.themesPromise = self._getThemes((lastDisplayedCollection !== undefined) ? lastDisplayedCollection : MY_THEMES);
             
             this.themesPromise
                 .done(function (data) {
@@ -406,7 +412,7 @@ define(function (require, exports, module) {
             
             $kuler.offset(kulerOffset);
             
-            this._updateTitleWidth();
+            this._updateCollectionTitleWidth();
         };
         
         return KulerInlineColorEditor;
