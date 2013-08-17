@@ -100,6 +100,7 @@ define(function (require, exports, module) {
                 event.preventDefault();
             }
         };
+
         /**
          * build the color swatch matrix and attach event handlers
          * @return {boolean} - returns false if there are no swatches, true otherwise              
@@ -170,7 +171,7 @@ define(function (require, exports, module) {
                 returnVal = false;
                 $nothemes.show();
             }
-
+            
             $loading.hide();
             return returnVal;
         };
@@ -178,6 +179,7 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
             var $kuler              = this.$kuler,
                 $themes             = this.$themes,
+                $nothemes           = this.$nothemes,
                 $loading            = this.$loading,
                 $title              = this.$title,
                 colorEditor         = this.colorEditor,
@@ -238,11 +240,12 @@ define(function (require, exports, module) {
                         newWidth;
                     
                     if (kulerCollection) {
-                        $themes.hide();
-                        $loading.show();
                         this.themesPromise = getThemes($kuler, kulerCollection);
                         var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(self);
                         
+                        $themes.hide();
+                        $nothemes.hide();
+                        $loading.show();
                         this.themesPromise.done(function (data) {
                             if (boundThemesHandler(data)) {
                                 self.$firstKulerItem = $themes.find(".kuler-swatch-block").first();
@@ -296,7 +299,7 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
             
-            var self = this,
+            var self            = this,
                 deferred        = $.Deferred(),
                 colorEditor     = this.colorEditor,
                 $htmlContent    = this.$htmlContent,
@@ -316,6 +319,8 @@ define(function (require, exports, module) {
             this.$title = $title;
             this.$kulerMenuDropdown = $(kulerMenuTemplate);
             this.$lastKulerItem = $lastKulerItem;
+            
+            $loading.show();
             this.themesPromise
                 .done(function (data) {
                     if (self._handleThemesPromise(data)) {
@@ -377,7 +382,6 @@ define(function (require, exports, module) {
                     deferred.reject(err);
                 });
             
-
             return deferred.promise();
         };
 
@@ -391,7 +395,6 @@ define(function (require, exports, module) {
                 children = $colorEditor.children(),
                 $list = $(children[1]),
                 kulerOffset = {
-                    top: $kuler.offset().top,
                     left: $list.offset().left + $list.outerWidth() + LEFT_MARGIN
                 };
             

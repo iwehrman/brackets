@@ -50,28 +50,12 @@ define(function (require, exports, module) {
                 return null;
             }
             
-            // Do nothing if we don't have an Internet connection.  Otherwise, calls to Kuler will fail anyway.
-            if (!window.navigator.onLine) {
-                return null;
-            }
-            
             var KulerInlineEditor = KulerInlineEditorModule.getConstructor(InlineColorEditor, tinycolor),
                 kulerEditor = new KulerInlineEditor(context.color, context.start, context.end),
-                kulerDeferred = $.Deferred(),
-                inlineEditorDeferred = $.Deferred();
+                deferred = $.Deferred();
             
-            brackets.authentication.getAuthorizedUser().done(function (user) {
-                kulerEditor.load(hostEditor).done(function () {
-                    kulerDeferred.resolve();
-                }).fail(function (err) {
-                    kulerDeferred.reject(err);
-                });
-            }).fail(function (err) {
-                kulerDeferred.reject(err);
-            });
-            
-            kulerDeferred.done(function () {
-                inlineEditorDeferred.resolve(kulerEditor);
+            kulerEditor.load(hostEditor).done(function () {
+                deferred.resolve(kulerEditor);
             }).fail(function (err) {
                 console.warn("Unable to load Kuler editor", err);
                 
@@ -80,10 +64,10 @@ define(function (require, exports, module) {
                 // we instead return our own instance of InlineColorEditor. 
                 var colorEditor = new InlineColorEditor(context.color, context.start, context.end);
                 colorEditor.load(hostEditor);
-                inlineEditorDeferred.resolve(colorEditor);
+                deferred.resolve(colorEditor);
             });
 
-            return inlineEditorDeferred.promise();
+            return deferred.promise();
         }, 1);
     }
 
@@ -100,6 +84,7 @@ define(function (require, exports, module) {
         setup(mainModule.prepareEditorForProvider, InlineColorEditorModule.InlineColorEditor);
         
         // warm up the cache
+        KulerAPI.loadCachedThemesFromPrefs();
         KulerAPI.getMyThemes();
         KulerAPI.getFavoriteThemes();
         KulerAPI.getRandomThemes();
