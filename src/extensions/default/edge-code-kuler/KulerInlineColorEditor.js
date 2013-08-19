@@ -66,7 +66,9 @@ define(function (require, exports, module) {
         KulerInlineColorEditor.prototype.constructor = KulerInlineColorEditor;
         KulerInlineColorEditor.prototype.parentClass = InlineColorEditor.prototype;
         
-        // update the width of the collection title based on the content
+        /**
+         * Update the width of the collection title based on the content
+         */
         KulerInlineColorEditor.prototype._updateCollectionTitleWidth = function () {
             var newWidth = this.$title.width() + this.$kuler.find(".kuler-dropdown-arrow").width() + 8;
             this.$kuler.find(".kuler-collection-title").css("width", newWidth);
@@ -74,7 +76,9 @@ define(function (require, exports, module) {
 
         /**
          * Fetch My Themes and update UI
-         * @return {promise} - a promise that resolves when the themes have been fetched 
+         * @param {string} collectionName Name of Kuler collection to display
+         * @return {Promise.<function(boolean): collection>} - 
+         *      a promise that resolves when the requested themes collection has been fetched from Kuler
          */
         KulerInlineColorEditor.prototype._getThemes = function (collectionName) {
             this.$title.text(Strings[collectionName]);
@@ -331,7 +335,7 @@ define(function (require, exports, module) {
             
             // get the last collection of themes displayed in the Kuler panel (or default to My Themes)
             var lastDisplayedCollection = kulerAPI.getLastDisplayedCollection();
-            this.themesPromise = self._getThemes((lastDisplayedCollection !== undefined) ? lastDisplayedCollection : MY_THEMES);
+            this.themesPromise = self._getThemes(lastDisplayedCollection || MY_THEMES);
             
             this.themesPromise
                 .done(function (data) {
