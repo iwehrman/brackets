@@ -110,7 +110,7 @@ define(function (require, exports, module) {
             it("should return proper request url for popular themes", function () {
                 var myFavoritesUrl = Kuler._constructPopularThemesRequestURL();
 
-                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=filter&maxNumber=60&metadata=all&sort=view_count&time=month");
+                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=public&maxNumber=60&metadata=all&sort=view_count&time=month");
             });
         });
 

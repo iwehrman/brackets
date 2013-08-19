@@ -150,7 +150,7 @@ define(function (require, exports, module) {
     }
 
     function _constructPopularThemesRequestURL() {
-        var queryParams =  buildQueryString({"filter": "filter", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "view_count", "time": "month"});
+        var queryParams =  buildQueryString({"filter": "public", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "view_count", "time": "month"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
