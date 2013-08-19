@@ -35,7 +35,8 @@ define(function (require, exports, module) {
         IMS_ERR_CALL_PENDING = 11;
 
     // max retries when the error shell error is CALL_PENDING
-    var MAX_RETRIES = 5;
+    var MAX_RETRIES = 10,
+        MS_WAIT_UNTIL_RETRY = 100;
 
     // cached authorization status from the shell
     var authStatusCache = null,
@@ -102,9 +103,6 @@ define(function (require, exports, module) {
                                 accessToken: accessToken,
                                 authorizedUser: authorizedUser
                             };
-
-                            // clear the cached promise
-                            authStatusDeferred = null;
                             
                             // invalidate and refresh the cached status once the token expires
                             authStatusTimer = window.setTimeout(function () {
@@ -118,7 +116,9 @@ define(function (require, exports, module) {
                             deferred.reject(parseError);
                         }
                     } else if (err === IMS_ERR_CALL_PENDING) {
-                        getAuthStatusHelper(++retryCount);
+                        window.setTimeout(function () {
+                            getAuthStatusHelper(++retryCount);
+                        }, MS_WAIT_UNTIL_RETRY);
                     } else {
                         deferred.reject(err);
                     }
@@ -143,7 +143,14 @@ define(function (require, exports, module) {
             // cached status or if a refresh has been forced; otherwise immediately
             // resolve with the cached information
             if (!authStatusCache || forceRefresh) {
+                // request new authStatus from IMSLib
                 getAuthStatusHelper();
+                
+                // clear the cached promise once the request is complete
+                deferred.always(function () {
+                    authStatusDeferred = null;
+                });
+
             } else {
                 deferred.resolve(authStatusCache);
             }
