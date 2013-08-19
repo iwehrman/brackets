@@ -22,25 +22,23 @@
  */
 
 /*jslint vars: true, plusplus: true, devel: true, browser: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, describe, it, xit, expect, beforeEach, afterEach, waitsFor, runs, $, brackets, waitsForDone, waitsForFail, spyOn */
+/*global define, describe, it, xit, expect, beforeEach, beforeFirst, afterEach, afterLast, waitsFor, runs, $, brackets, waitsForDone, waitsForFail, spyOn */
 
 define(function (require, exports, module) {
     "use strict";
 
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils");
 
-    require("thirdparty/jquery.mockjax.js");
-
     var TEST_KULER_JSON = require("text!unittest-files/mytheme-kuler.json");
 
     describe("Kuler", function () {
-        
+
         var testWindow,
             brackets,
             Kuler,
             extensionRequire;
-        
-        beforeEach(function () {
+
+        beforeFirst(function () {
             runs(function () {
                 SpecRunnerUtils.createTestWindowAndRun(this, function (w) {
                     testWindow = w;
@@ -51,34 +49,14 @@ define(function (require, exports, module) {
                 });
             });
         });
-        
-        afterEach(function () {
+
+        afterLast(function () {
             runs(function () {
                 SpecRunnerUtils.closeTestWindow(testWindow);
                 Kuler = null;
                 extensionRequire = null;
                 brackets = null;
                 testWindow = null;
-            });
-        });
-        
-        it("should be able to retrieve Themes for the currently logged-in user", function () {
-            var promise;
-
-            runs(function () {
-                promise = Kuler.getMyThemes(true);
-
-                waitsForDone(promise, "Get My Themes", 5000);
-            });
-        });
-
-        it("should be able to retrieve Favorite Themes for the currently logged-in user", function () {
-            var promise;
-
-            runs(function () {
-                promise = Kuler.getFavoriteThemes(true);
-
-                waitsForDone(promise, "Get FavoriteThemes", 5000);
             });
         });
 
@@ -93,7 +71,7 @@ define(function (require, exports, module) {
 
                 Kuler.flushCachedThemes();
                 promise = Kuler.getMyThemes();
-                
+
                 waitsForFail(promise, "Nothing will be returned", 5000);
             });
 
@@ -122,84 +100,147 @@ define(function (require, exports, module) {
 
                 expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=likes&maxNumber=60&metadata=all");
             });
+
+            it("should return proper request url for random themes", function () {
+                var myFavoritesUrl = Kuler._constructRandomThemesRequestURL();
+
+                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=public&maxNumber=60&metadata=all&sort=random");
+            });
+
+            it("should return proper request url for popular themes", function () {
+                var myFavoritesUrl = Kuler._constructPopularThemesRequestURL();
+
+                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=filter&maxNumber=60&metadata=all&sort=view_count&time=month");
+            });
         });
 
         describe("Extract information from Kuler JSON", function () {
-//            it("should return the parsed JSON themes", function () {
-//                var promise,
-//                    theme,
-//                    mockjaxid;
-//
-//                brackets.authentication = {};
-//                brackets.authentication.getAccessToken = function () {
-//                    return new $.Deferred().resolve("actoken").promise();
-//                };
-//
-//                mockjaxid = $.mockjax({
-//                    url : Kuler._constructMyThemesRequestURL(),
-//                    contentType: 'text/json',
-//                    responseText : TEST_KULER_JSON
-//                });
-//
-//                runs(function () {
-//                    Kuler.flushCachedThemes();
-//                    promise = Kuler.getMyThemes(true);
-//
-//                    promise.done(function (parsedJSON) {
-//                        theme = parsedJSON;
-//                    });
-//                    
-//                    promise.fail(function (err) {
-//                        console.log(err);
-//                    });
-//
-//                    waitsForDone(promise, "Return the parsed JSON from Kuler");
-//                });
-//
-//                runs(function () {
-//                    expect(theme.themes[0].name).toBe("Test Theme");
-//                    expect(theme.themes[0].swatches[0].hex).toBe("FF530D");
-//                    expect(theme.themes[0].swatches[1].hex).toBe("E82C0C");
-//                    expect(theme.themes[0].swatches[2].hex).toBe("FF0000");
-//                    expect(theme.themes[0].swatches[3].hex).toBe("E80C7A");
-//                    expect(theme.themes[0].swatches[4].hex).toBe("FF0DFF");
-//                });
-//
-//                runs(function () {
-//                    // cleanup
-//                    $.mockjaxClear(mockjaxid);
-//                    delete brackets.authentication;
-//                });
-//            });
-
-            it("should return nothing if no theme is available", function () {
+            it("should return the parsed JSON themes", function () {
                 var promise,
-                    theme,
-                    mockjaxid;
+                    theme;
 
                 brackets.authentication = {};
                 brackets.authentication.getAccessToken = function () {
                     return new $.Deferred().resolve("actoken").promise();
                 };
 
-                mockjaxid = $.mockjax({
-                    url : Kuler._constructMyThemesRequestURL(),
-                    status : 400
+                spyOn(Kuler, "_executeAjaxRequest").andCallFake(function (requestConfig) {
+                    return new $.Deferred().resolve(JSON.parse(TEST_KULER_JSON)).promise();
                 });
 
                 runs(function () {
                     Kuler.flushCachedThemes();
                     promise = Kuler.getMyThemes(true);
 
-                    waitsForFail(promise, "No JSON from Kuler");
+                    promise.done(function (parsedJSON) {
+                        theme = parsedJSON;
+                    });
+
+                    promise.fail(function (err) {
+                        console.log(err);
+                    });
+
+                    waitsForDone(promise, "Return the parsed JSON from Kuler");
+                });
+
+                runs(function () {
+                    expect(theme.themes[0].name).toBe("Test Theme");
+                    expect(theme.themes[0].swatches[0].hex).toBe("FF530D");
+                    expect(theme.themes[0].swatches[1].hex).toBe("E82C0C");
+                    expect(theme.themes[0].swatches[2].hex).toBe("FF0000");
+                    expect(theme.themes[0].swatches[3].hex).toBe("E80C7A");
+                    expect(theme.themes[0].swatches[4].hex).toBe("FF0DFF");
                 });
 
                 runs(function () {
                     // cleanup
-                    $.mockjaxClear(mockjaxid);
+                    delete brackets.authentication;
+                });
+            });
+
+            it("should return rudimentary JSON if no theme is available", function () {
+                var promise,
+                    theme;
+
+                brackets.authentication = {};
+                brackets.authentication.getAccessToken = function () {
+                    return new $.Deferred().resolve("token").promise();
+                };
+
+                spyOn(Kuler, "_executeAjaxRequest").andCallFake(function (requestConfig) {
+                    return new $.Deferred().resolve(JSON.parse('{"totalCount": 0, "themes": []}')).promise();
+                });
+
+                runs(function () {
+                    Kuler.flushCachedThemes();
+                    promise = Kuler.getMyThemes(true);
+
+                    promise.done(function (parsedJSON) {
+                        theme = parsedJSON;
+                    });
+
+                    waitsForDone(promise, "No JSON from Kuler");
+                });
+
+                runs(function () {
+                    expect(theme.totalCount).toBe(0);
+                    expect(theme.themes.length).toBe(0);
+                });
+
+                runs(function () {
+                    // cleanup
+                    delete brackets.authentication;
+                });
+            });
+
+            it("should return cached theme for the second call", function () {
+                var promise,
+                    theme1,
+                    theme2,
+                    called = 0;
+
+                brackets.authentication = {};
+                brackets.authentication.getAccessToken = function () {
+                    return new $.Deferred().resolve("token").promise();
+                };
+
+                spyOn(Kuler, "_executeAjaxRequest").andCallFake(function (requestConfig) {
+                    called += 1;
+                    return new $.Deferred().resolve(JSON.parse(TEST_KULER_JSON)).promise();
+                });
+
+                runs(function () {
+                    Kuler.flushCachedThemes();
+                    promise = Kuler.getMyThemes(true);
+
+                    promise.done(function (parsedJSON) {
+                        theme1 = parsedJSON;
+                    });
+
+                    waitsForDone(promise, "Some JSON from Kuler");
+                });
+
+                runs(function () {
+                    promise = Kuler.getMyThemes();
+
+                    promise.done(function (parsedJSON) {
+                        theme2 = parsedJSON;
+                    });
+
+                    waitsForDone(promise, "Some JSON from Kuler");
+                });
+
+                runs(function () {
+                    expect(theme1).toEqual(theme2);
+                    expect(called).toBe(1);
+                });
+
+                runs(function () {
+                    // cleanup
                     delete brackets.authentication;
                 });
             });
         });
     });
 });
+
