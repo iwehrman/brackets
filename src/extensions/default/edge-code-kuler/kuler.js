@@ -26,9 +26,9 @@
 
 define(function (require, exports, module) {
     "use strict";
-    
+
     var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
-    
+
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
@@ -43,7 +43,7 @@ define(function (require, exports, module) {
     var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
         IMS_JUMPTOKEN_SCOPE = "openid",
         IMS_JUMPTOKEN_RESPONSE_TYPE = "token";
-    
+
     // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
     // themes fetched may not be bigger than 60. Otherwise the scrollbar leaves
     // an artifact on screen when it is being hidden.
@@ -54,7 +54,7 @@ define(function (require, exports, module) {
         promiseCache = {},
         timers = {},
         jumpURLCache = {};
-    
+
     /*
      * Load the set of cached themes URLs from the prefs. Each URL in the set
      * is a key in the preferences module at which a themes object is found.
@@ -72,51 +72,51 @@ define(function (require, exports, module) {
         }
         return urlsObj;
     }
-    
+
     /**
      * Load all the themes saved in the prefs into the themesCache
      */
     function loadCachedThemesFromPrefs() {
         var urlObj = _loadCachedThemesURLsFromPrefs(),
             urls = Object.keys(urlObj);
-        
+
         urls.forEach(function (url) {
             try {
                 var themesJSON  = prefs.getValue(url),
                     themesObj   = JSON.parse(themesJSON);
-                
+
                 themesCache[url] = themesObj;
             } catch (e) {
                 prefs.remove(url);
             }
         });
     }
-    
+
     /*
      * Saves a themesObj, keyed by the url from whence it came, in the prefs.
-     * 
+     *
      * @param {string} url - from whence the themesObj came
      * @param {Object} themesObj - a themesObj from the Kuler REST API
      */
     function _storeCachedThemesToPrefs(url, themesObj) {
         var urlsObj = _loadCachedThemesURLsFromPrefs();
-        
+
         urlsObj[url] = true;
         prefs.setValue(PREFS_URLS_KEY, JSON.stringify(urlsObj));
         prefs.setValue(url, JSON.stringify(themesObj));
     }
-    
+
     /*
      * Remove all saved themes objects from the prefs.
      */
     function _flushCachedThemesFromPrefs() {
         var urlsObj = _loadCachedThemesURLsFromPrefs(),
             urls = Object.keys(urlsObj);
-        
+
         urls.forEach(function (url) {
             prefs.remove(url);
         });
-        
+
         prefs.setValue(PREFS_URLS_KEY, {});
     }
 
@@ -124,24 +124,38 @@ define(function (require, exports, module) {
         return Mustache.render(KULER_PRODUCTION_URL, {"resource" : resource, "queryparams" : queryParams});
     }
 
+    function buildQueryString(params) {
+        var keys = Object.keys(params).sort(),
+            args = keys.map(function (key) {
+                var value = encodeURIComponent(params[key]);
+                return key + "=" + value;
+            });
+
+        return "?" + args.join("&");
+    }
+
     function _constructMyThemesRequestURL() {
-        var queryParams = "?filter=my_themes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        var queryParams = buildQueryString({"filter": "my_themes", "maxNumber": MAX_THEMES, "metadata": "all"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructMyFavoritesRequestURL() {
-        var queryParams = "?filter=likes&maxNumber=" + MAX_THEMES + "&metadata=all";
+        var queryParams =  buildQueryString({"filter": "likes", "maxNumber": MAX_THEMES, "metadata": "all"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
-    
+
     function _constructRandomThemesRequestURL() {
-        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=random";
+        var queryParams =  buildQueryString({"filter": "public", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "random"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
-    
+
     function _constructPopularThemesRequestURL() {
-        var queryParams = "?filter=public&maxNumber=" + MAX_THEMES + "&metadata=all&sort=view_count&time=month";
+        var queryParams =  buildQueryString({"filter": "filter", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "view_count", "time": "month"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
+    }
+
+    function _executeAjaxRequest(requestConfig) {
+        return $.ajax(requestConfig);
     }
 
     function _prepareKulerRequest(kulerUrl, accessToken) {
@@ -150,7 +164,7 @@ define(function (require, exports, module) {
             "Authorization" : Mustache.render(AUTH_HEADER, {accesstoken : accessToken})
         };
 
-        return $.ajax({url: kulerUrl, headers : headers});
+        return exports._executeAjaxRequest({url: kulerUrl, headers : headers});
     }
 
     function _executeRequest(url) {
@@ -164,8 +178,8 @@ define(function (require, exports, module) {
 
                 jqXHR.done(function (data) {
                     deferred.resolve(data);
-                }).fail(function () {
-                    deferred.reject();
+                }).fail(function (jqXHR, textStatus, errorThrown) {
+                    deferred.reject(errorThrown);
                 });
             });
 
@@ -182,7 +196,7 @@ define(function (require, exports, module) {
     function _getThemes(url, refresh) {
         function _refreshThemes() {
             var promise = promiseCache[url];
-    
+
             if (promise) {
                 // return the not-yet-fulfilled promise
                 return promise;
@@ -191,38 +205,38 @@ define(function (require, exports, module) {
                     clearTimeout(timers[url]);
                     delete timers[url];
                 }
-                
+
                 promise = _executeRequest(url);
                 promiseCache[url] = promise;
-                
+
                 promise.always(function () {
                     delete promiseCache[url];
-                    
+
                     timers[url] = setTimeout(function () {
                         // refresh themes occasionally
                         _getThemes(url, true);
                     }, REFRESH_INTERVAL);
                 });
-                
+
                 promise.done(function (data) {
                     // promise fulfilled. Cache the updated themes.
                     themesCache[url] = data;
-                    
+
                     // save the theme in the prefs for offline use
                     _storeCachedThemesToPrefs(url, data);
                 });
-                
+
                 return promise;
             }
         }
-        
+
         var cachedThemes = themesCache[url],
             refreshPromise;
-        
+
         if (refresh || !cachedThemes) {
             refreshPromise = _refreshThemes();
         }
-        
+
         if (cachedThemes) {
             // return the set of cached themes
             return $.Deferred().resolve(cachedThemes).promise();
@@ -239,38 +253,38 @@ define(function (require, exports, module) {
 
     function getFavoriteThemes(refresh) {
         var url = _constructMyFavoritesRequestURL();
-        
-        return _getThemes(url, refresh);
-    }
-    
-    function getRandomThemes(refresh) {
-        var url = _constructRandomThemesRequestURL();
-        
-        return _getThemes(url, refresh);
-    }
-    
-    function getPopularThemes(refresh) {
-        var url = _constructPopularThemesRequestURL();
-        
+
         return _getThemes(url, refresh);
     }
 
-    
+    function getRandomThemes(refresh) {
+        var url = _constructRandomThemesRequestURL();
+
+        return _getThemes(url, refresh);
+    }
+
+    function getPopularThemes(refresh) {
+        var url = _constructPopularThemesRequestURL();
+
+        return _getThemes(url, refresh);
+    }
+
+
     /**
      * Get URL info about Kuler theme in the form of a jQuery promise that resolves to a
      * function that produces a theme's URL. The URL can change after each request, so
      * clients should always call the returned function before crafting a request.
-     * 
+     *
      * @param {Object} theme - Kuler theme object
-     * @return {Promise.<function(): string>} - 
-     *      a jQuery promise that resolves a function that dynamically provides the correct 
+     * @return {Promise.<function(): string>} -
+     *      a jQuery promise that resolves a function that dynamically provides the correct
      *      URL for a theme. Clients should call this function before crafting each request.
      */
     function getThemeURLInfo(theme) {
         var fullId = theme.name.replace(/\ /g, "-") + "-color-theme-" + theme.id,
             url = Strings.KULER_URL + "/" + fullId + "/",
             deferred = $.Deferred();
-        
+
         if (theme.access && theme.access.visibility === "public") {
             // public themes can always use the direct URL
             deferred.resolve(function () {
@@ -281,7 +295,7 @@ define(function (require, exports, module) {
                 brackets.authentication.getAccessToken().done(function (token) {
                     /*
                      * A function that returns the correct URL for the given theme.
-                     * If there is no cached jump URL then return the direct URL. 
+                     * If there is no cached jump URL then return the direct URL.
                      * Otherwise return the cached jumpURL before nullifying it, so
                      * that it won't be returned a second time.
                      */
@@ -306,7 +320,7 @@ define(function (require, exports, module) {
                     if (!jumpURLCache.hasOwnProperty(token)) {
                         jumpURLCache[token] = {};
                     }
-                    
+
                     if (!jumpURLCache[token].hasOwnProperty(url)) {
                         // no jump URL has previously been fetched for this URL
                         // so request a new one before resolving
@@ -318,7 +332,7 @@ define(function (require, exports, module) {
                             bearer_token: token
                         }).done(function (data) {
                             var jumpURL = data.jump;
-                            
+
                             // cache the jump URL if the token hasn't changed
                             if (jumpURLCache.hasOwnProperty(token)) {
                                 jumpURLCache[token][url] = jumpURL;
@@ -328,14 +342,14 @@ define(function (require, exports, module) {
                                         if (jumpURLCache[token].hasOwnProperty(url)) {
                                             delete jumpURLCache[token][url];
                                         }
-                                        
+
                                         if (Object.keys(jumpURLCache[token]).length === 0) {
                                             delete jumpURLCache[token];
                                         }
                                     }
                                 }, REFRESH_INTERVAL);
                             }
-                            
+
                             deferred.resolve(getURL);
                         }).fail(function (err) {
                             deferred.reject(err);
@@ -350,7 +364,7 @@ define(function (require, exports, module) {
                 deferred.reject();
             }
         }
-        
+
         return deferred.promise();
     }
 
@@ -381,7 +395,7 @@ define(function (require, exports, module) {
         promiseCache = {};
         _flushCachedThemesFromPrefs();
     }
-    
+
     // Public API
     exports.getMyThemes                 = getMyThemes;
     exports.getFavoriteThemes           = getFavoriteThemes;
@@ -399,4 +413,5 @@ define(function (require, exports, module) {
     exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
     exports._constructPopularThemesRequestURL   = _constructPopularThemesRequestURL;
     exports._constructMyFavoritesRequestURL     = _constructMyFavoritesRequestURL;
+    exports._executeAjaxRequest                 = _executeAjaxRequest;
 });
