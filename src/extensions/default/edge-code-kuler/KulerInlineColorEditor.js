@@ -35,22 +35,35 @@ define(function (require, exports, module) {
         NativeApp               = brackets.getModule("utils/NativeApp"),
         PopUpManager            = brackets.getModule("widgets/PopUpManager"),
         Strings                 = require("strings"),
-        kulerAPI                = require("kuler");
-        
+        kulerAPI                = require("kuler"),
+        tinycolor;
+ 
+    var MY_THEMES = "MY_KULER_THEMES",
+        FAVORITE_THEMES = "FAVORITE_KULER_THEMES",
+        POPULAR_THEMES = "POPULAR_KULER_THEMES",
+        RANDOM_THEMES = "RANDOM_KULER_THEMES";
+    
     var _kulerColorEditorHTML   = require("text!html/KulerColorEditorTemplate.html"),
         _kulerThemeHTML         = require("text!html/KulerThemeTemplate.html"),
         _kulerMenuHTML          = require("text!html/KulerMenu.html");
     
     var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
         kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML),
-        kulerMenuTemplate           = Mustache.render(_kulerMenuHTML, Strings);
-    
-    var tinycolor,
-        FAVORITE_THEMES = "FAVORITE_KULER_THEMES",
-        POPULAR_THEMES = "POPULAR_KULER_THEMES",
-        RANDOM_THEMES = "RANDOM_KULER_THEMES",
-        MY_THEMES = "MY_KULER_THEMES";
-    
+        kulerMenuTemplate           = (function () {
+            var keys = [MY_THEMES, FAVORITE_THEMES, POPULAR_THEMES, RANDOM_THEMES],
+                collections = keys.map(function (key) {
+                    return {
+                        key: key,
+                        title: Strings[key]
+                    };
+                }),
+                settings = {
+                    collections: collections
+                };
+            
+            return Mustache.render(_kulerMenuHTML, settings);
+        }());
+
     function getConstructor(InlineColorEditor, _tinycolor) {
         
         tinycolor = _tinycolor;
@@ -99,6 +112,65 @@ define(function (require, exports, module) {
                        scroller.clientHeight >= scroller.scrollHeight) {
                 event.preventDefault();
             }
+        };
+        
+        /**
+         * Adds keydown handlers for elements in the color picker and the Kuler
+         * themes list. Grafts the first and last focusable Kuler elements into
+         * the tabbing cycle of the color picker. This connects the last focusable
+         * color picker element to the first focusable Kuler element, and the last
+         * focusable Kuler element to the first focusable color picker when tabbing
+         * forward. In the other direction, this connects first focusable color picker
+         * element to the last focusable Kuler element, and the first focusable Kuler
+         * element to the last focusable color picker element.
+         * 
+         * Assumes that this.$lastKulerItem and this.$lastColorItem, which are static,
+         * have already been initialized.
+         *
+         * @param {jQuery.Object} $firstKulerItem - the first focusable Kuler element
+         */
+        KulerInlineColorEditor.prototype._addKeydownHandlers = function ($firstKulerItem) {
+            var colorEditor = this.colorEditor,
+                $firstColorItem = colorEditor.$selectionBase,
+                $lastKulerItem = this.$lastKulerItem,
+                $lastColorItem = this.$lastColorItem;
+            
+            $lastColorItem.off(".kuler");
+            $firstKulerItem.off(".kuler");
+            $lastKulerItem.off(".kuler");
+            $firstColorItem.off(".kuler");
+            
+            // tab forward from last focusable color picker element to first Kuler swatch
+            $lastColorItem.on("keydown.kuler", function (event) {
+                if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                    $firstKulerItem.focus();
+                    return false;
+                }
+            });
+            
+            // tab backward from first Kuler swatch to last focusable color picker element
+            $firstKulerItem.on("keydown.kuler", function (event) {
+                if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                    $lastColorItem.focus();
+                    return false;
+                }
+            });
+            
+            // tab forward from more info tab to first focusable color picker element
+            $lastKulerItem.on("keydown.kuler", function (event) {
+                if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                    $firstColorItem.focus();
+                    return false;
+                }
+            });
+            
+            // tab backward from first focusable color picker to element more info tab
+            $firstColorItem.on("keydown.kuler", function (event) {
+                if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                    $lastKulerItem.focus();
+                    return false;
+                }
+            });
         };
 
         /**
@@ -236,7 +308,7 @@ define(function (require, exports, module) {
             function _handleListEvents() {
                 $kulerMenuDropdown.click(function (e) {
                     var $link = $(e.target).closest("a"),
-                        kulerCollection  = $link.data("collection"),
+                        kulerCollection = $link.data("collection"),
                         newWidth;
                     
                     if (kulerCollection) {
@@ -247,12 +319,16 @@ define(function (require, exports, module) {
                         $nothemes.hide();
                         $loading.show();
                         this.themesPromise.done(function (data) {
+                            var $firstKulerItem;
+                            
                             if (boundThemesHandler(data)) {
-                                self.$firstKulerItem = $themes.find(".kuler-swatch-block").first();
+                                $firstKulerItem = $themes.find(".kuler-swatch-block").first();
                             } else {
-                                self.$firstKulerItem = self.$lastKulerItem;
+                                $firstKulerItem = self.$lastKulerItem;
                             }
-                    
+                            
+                            self._addKeydownHandlers($firstKulerItem);
+                            $firstKulerItem.focus();
                         });
                         closeDropdown();
                     }
@@ -310,7 +386,7 @@ define(function (require, exports, module) {
                 $loading        = $kuler.find(".kuler-loading"),
                 $title          = $kuler.find(".kuler-dropdown-title"),
                 $lastKulerItem  = $kuler.find("a.kuler-more-info"),
-                $lastColorPickerItem;
+                $firstKulerItem;
 
             this.$kuler = $kuler;
             this.$themes = $themes;
@@ -324,51 +400,21 @@ define(function (require, exports, module) {
             this.themesPromise
                 .done(function (data) {
                     if (self._handleThemesPromise(data)) {
-                        self.$firstKulerItem = $themes.find(".kuler-swatch-block").first();
+                        $firstKulerItem = $themes.find(".kuler-swatch-block").first();
                     } else {
-                        self.$firstKulerItem = self.$lastKulerItem;
+                        $firstKulerItem = $lastKulerItem;
                     }
                     
                     var $swatchItems = colorEditor.$swatches.find("li");
                     if ($swatchItems.length > 0) {
                         // override tab behavior of last color editor swatch, if it exists
-                        $lastColorPickerItem = $swatchItems.last();
+                        self.$lastColorItem = $swatchItems.last();
                     } else {
                         // otherwise override the HSL button
-                        $lastColorPickerItem = colorEditor.$hslButton;
+                        self.$lastColorItem = colorEditor.$hslButton;
                     }
                     
-                    // tab forward from last focusable color picker element to first Kuler swatch
-                    $lastColorPickerItem.on("keydown", function (event) {
-                        if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
-                            self.$firstKulerItem.focus();
-                            return false;
-                        }
-                    });
-                    
-                    // tab backward from first Kuler swatch to last focusable color picker element
-                    self.$firstKulerItem.on("keydown", function (event) {
-                        if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
-                            $lastColorPickerItem.focus();
-                            return false;
-                        }
-                    });
-                    
-                    // tab forward from more info tab to first focusable color picker element
-                    self.$lastKulerItem.on("keydown", function (event) {
-                        if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
-                            colorEditor.$selectionBase.focus();
-                            return false;
-                        }
-                    });
-                    
-                    // tab backward from first focusable color picker to element more info tab
-                    colorEditor.$selectionBase.on("keydown", function (event) {
-                        if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
-                            self.$lastKulerItem.focus();
-                            return false;
-                        }
-                    });
+                    self._addKeydownHandlers($firstKulerItem);
                                             
                     $kuler.on("click", "a", self._handleLinkClick);
                     $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll.bind(self));
