@@ -4,6 +4,7 @@
 @heading-color: #454545;
 @link-color: #0083e8;
 @menu-highlight-color: rgba(224, 240, 250, 1);
+@focus-highlight-color: #65aeed;
 
 /* Typography */
 @font-weight-semibold: 500;
@@ -58,22 +59,8 @@
     }
 }
 
-// trying to colorize the kuler links on hover - end
-
 // Used to avoid overlapping CM scrollbar - TODO (#3460): need a cleaner way to do this
 @scrollbar-wid: 17px;
-
-.border-fixer-upper {
-    &:first-child {
-        border-top-left-radius: 3px;
-        border-bottom-left-radius: 3px;
-    }
-    
-    &:last-child {
-        border-top-right-radius: 3px;
-        border-bottom-right-radius: 3px;
-    }
-}
 
 /* Right-hand column */
 .kuler-content {
@@ -170,6 +157,7 @@
                 width: 120px;
                 height: 20px;
                 margin-bottom: -6px;
+                margin-right: 4px;
                                     
                 .kuler-swatch {
                     position: absolute;
@@ -184,62 +172,39 @@
                         
                         &:focus {
                             outline: none;
-                            box-shadow: inset 0 0 0 2px rgba(111, 181, 241, 0.7);
+                            box-shadow: inset 0 0 0 2px @focus-highlight-color;
                             border-radius: 2px;
                         }
                     }
                     
-                    .kuler-block-1 {
-                        width: 100%;
-                        .border-fixer-upper;
+                    .kuler-block {
+                        width: 20%;
+                        
+                        &:first-child {
+                            border-top-left-radius: 3px;
+                            border-bottom-left-radius: 3px;
+                        }
+                        
+                        &:last-child {
+                            border-top-right-radius: 3px;
+                            border-bottom-right-radius: 3px;
+                        }
                     }
-                    
-                    .kuler-block-2 {
-                        width: 100%/2;
-                        .border-fixer-upper;
-                    }
-
-                    .kuler-block-3 {
-                        width: 100%/3;
-                        .border-fixer-upper;
-                    }
-                    
-                    .kuler-block-4 {
-                        width: 100%/4;
-                        .border-fixer-upper;
-                    }
-                    
-                    .kuler-block-5 {
-                        width: 100%/5;
-                        .border-fixer-upper;
-                    }
-                    
-                    .kuler-block-6 {
-                        width: 100%/6;
-                        .border-fixer-upper;
-                    }
-
                 }
             }
 
+            .kuler-swatch-title {
+                padding: 2px;   
+            }
+            
             a {
                 color: inherit;
                 text-decoration: none;
                 
                 &:focus {
                     outline: none;
-                    box-shadow: none;
-                    border-radius: 0;
-                }
-            }
-            
-            .kuler-swatch-title {
-                padding-left: 6px;
-                
-                &:focus {
-                    outline: none;
-                    box-shadow: none;
-                    border-radius: 0;
+                    box-shadow: 0 0 0 2px @focus-highlight-color;
+                    border-radius: 2px;
                 }
             }
         }
