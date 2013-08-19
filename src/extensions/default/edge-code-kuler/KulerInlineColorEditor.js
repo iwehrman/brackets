@@ -258,13 +258,12 @@ define(function (require, exports, module) {
                         var $title = $theme.find(".kuler-swatch-title"),
                             $anchor;
                         
-                        $title.wrap("<a href='#'>");
+                        $title.wrap("<a href='#' tabindex='0'>");
                         $anchor = $title.parent();
                         $anchor.on("click", function () {
                             NativeApp.openURLInDefaultBrowser(getUrl());
                             return false;
                         });
-                        $anchor.attr("tabindex", -1);
                     });
                 });
                 returnVal = true;
