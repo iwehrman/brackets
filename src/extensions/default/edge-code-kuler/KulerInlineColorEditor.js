@@ -69,16 +69,46 @@ define(function (require, exports, module) {
         tinycolor = _tinycolor;
 
         /**
-         * @contructor
+         * @constructor
          */
         function KulerInlineColorEditor() {
             InlineColorEditor.apply(this, arguments);
-            this.themesPromise = kulerAPI.getMyThemes();
         }
         
         KulerInlineColorEditor.prototype = Object.create(InlineColorEditor.prototype);
         KulerInlineColorEditor.prototype.constructor = KulerInlineColorEditor;
         KulerInlineColorEditor.prototype.parentClass = InlineColorEditor.prototype;
+        
+        /**
+         * Update the width of the collection title based on the content
+         */
+        KulerInlineColorEditor.prototype._updateCollectionTitleWidth = function () {
+            var newWidth = this.$title.width() + this.$kuler.find(".kuler-dropdown-arrow").width() + 8;
+            this.$kuler.find(".kuler-collection-title").css("width", newWidth);
+        };
+
+        /**
+         * Fetch My Themes and update UI
+         * @param {string} collectionName Name of Kuler collection to display
+         * @return {Promise.<collection>} - 
+         *      a promise that resolves when the requested themes collection has been fetched from Kuler
+         */
+        KulerInlineColorEditor.prototype._getThemes = function (collectionName) {
+            this.$title.text(Strings[collectionName]);
+            this._updateCollectionTitleWidth();
+            switch (collectionName) {
+            case MY_THEMES:
+                return kulerAPI.getMyThemes();
+            case FAVORITE_THEMES:
+                return kulerAPI.getFavoriteThemes();
+            case POPULAR_THEMES:
+                return kulerAPI.getPopularThemes();
+            case RANDOM_THEMES:
+                return kulerAPI.getRandomThemes();
+            default:
+                throw new Error("Unknown Kuler theme collection: " + collectionName);
+            }
+        };
         
         KulerInlineColorEditor.prototype._handleLinkClick = function (event) {
             event.preventDefault();
@@ -257,28 +287,6 @@ define(function (require, exports, module) {
                 colorEditor         = this.colorEditor,
                 $kulerMenuDropdown  = this.$kulerMenuDropdown,
                 self                = this;
-
-            /**
-             * Fetch My Themes and update UI
-             * @return {promise} - a promise that resolves when the themes have been fetched 
-             */
-            function getThemes($kuler, collectionName) {
-                $title.text(Strings[collectionName]);
-                var newWidth = $title.width() + $kuler.find(".kuler-dropdown-arrow").width() + 8;
-                $kuler.find(".kuler-collection-title").css("width", newWidth);
-                switch (collectionName) {
-                case MY_THEMES:
-                    return kulerAPI.getMyThemes();
-                case FAVORITE_THEMES:
-                    return kulerAPI.getFavoriteThemes();
-                case POPULAR_THEMES:
-                    return kulerAPI.getPopularThemes();
-                case RANDOM_THEMES:
-                    return kulerAPI.getRandomThemes();
-                default:
-                    throw new Error("Unknown Kuler theme collection: " + collectionName);
-                }
-            }
             
             /**
              * Close the dropdown.
@@ -312,15 +320,17 @@ define(function (require, exports, module) {
                         newWidth;
                     
                     if (kulerCollection) {
-                        this.themesPromise = getThemes($kuler, kulerCollection);
+                        this.themesPromise = self._getThemes(kulerCollection);
                         var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(self);
                         
                         $themes.hide();
                         $nothemes.hide();
                         $loading.show();
                         this.themesPromise.done(function (data) {
+                            // remember this collection as the last displayed
+                            kulerAPI.setLastDisplayedCollection(kulerCollection);
+
                             var $firstKulerItem;
-                            
                             if (boundThemesHandler(data)) {
                                 $firstKulerItem = $themes.find(".kuler-swatch-block").first();
                             } else {
@@ -397,6 +407,11 @@ define(function (require, exports, module) {
             this.$lastKulerItem = $lastKulerItem;
             
             $loading.show();
+            
+            // get the last collection of themes displayed in the Kuler panel (or default to My Themes)
+            var lastDisplayedCollection = kulerAPI.getLastDisplayedCollection();
+            this.themesPromise = self._getThemes(lastDisplayedCollection || MY_THEMES);
+            
             this.themesPromise
                 .done(function (data) {
                     if (self._handleThemesPromise(data)) {
@@ -445,6 +460,8 @@ define(function (require, exports, module) {
                 };
             
             $kuler.offset(kulerOffset);
+            
+            this._updateCollectionTitleWidth();
         };
         
         return KulerInlineColorEditor;

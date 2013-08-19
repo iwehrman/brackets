@@ -37,6 +37,7 @@ define(function (require, exports, module) {
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
         AUTH_HEADER = "Bearer {{accesstoken}}",
         PREFS_URLS_KEY = "KULER_URLS",
+        PREFS_LAST_DISPLAYED_COLLECTION_KEY = "LAST_DISPLAYED_COLLECTION",
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
 
     var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
@@ -367,6 +368,28 @@ define(function (require, exports, module) {
         return deferred.promise();
     }
 
+    /**
+     * Retrieves the name of the last collection displayed as previously stored
+     * by the PreferenceManager.
+     *
+     * @return {string} Name of last collection.  Can be 'undefined' if nothing
+     *      had been previously saved.
+     */
+    function getLastDisplayedCollection() {
+        return prefs.getValue(PREFS_LAST_DISPLAYED_COLLECTION_KEY);
+    }
+    
+    /**
+     * Remember the name of the last collection displayed in the Kuler panel.
+     * Will persist the value in the PreferenceManager to be available across
+     * application instances.
+     *
+     * @param {string} Name of last collection to save
+     */
+    function setLastDisplayedCollection(collection) {
+        prefs.setValue(PREFS_LAST_DISPLAYED_COLLECTION_KEY, collection);
+    }
+    
     function flushCachedThemes() {
         themesCache = {};
         promiseCache = {};
@@ -380,6 +403,8 @@ define(function (require, exports, module) {
     exports.getPopularThemes            = getPopularThemes;
     exports.getThemeURLInfo             = getThemeURLInfo;
     exports.loadCachedThemesFromPrefs   = loadCachedThemesFromPrefs;
+    exports.getLastDisplayedCollection  = getLastDisplayedCollection;
+    exports.setLastDisplayedCollection  = setLastDisplayedCollection;
     exports.flushCachedThemes           = flushCachedThemes;
 
     // for testing purpose
