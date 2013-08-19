@@ -54,7 +54,7 @@ define(function (require, exports, module) {
                 brackets,
                 IMSConnector,
                 extensionRequire;
-            
+
             beforeFirst(function () {
                 SpecRunnerUtils.createTestWindowAndRun(this, function (w) {
                     testWindow = w;
@@ -79,7 +79,7 @@ define(function (require, exports, module) {
                     // Wait for any pending auth status promises to finish up
                     waitsForDone(IMSConnector._getAuthStatus(), "Cache warm-up");
                 });
-                
+
                 runs(function () {
                     IMSConnector._invalidateCache();
                 });
@@ -285,7 +285,7 @@ define(function (require, exports, module) {
             it("should not return an access token if the IMSLib call needed too many retries to provide a result", function () {
                 var promise,
                     timesCalled = 0,
-                    maxRetries = 5;
+                    maxRetries = 10;
 
                 runs(function () {
                     spyOn(brackets.app, 'getAuthorizedUser').andCallFake(function (callback) {
