@@ -32,7 +32,6 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
     var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
-        KULER_QUERY_STRING = "?filter={{filter}}&maxNumber={{maxNumber}}&metadata={{metadata}}{{{moreParams}}}",
         KULER_RESOURCE_THEMES = "themes",
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
@@ -124,27 +123,33 @@ define(function (require, exports, module) {
         return Mustache.render(KULER_PRODUCTION_URL, {"resource" : resource, "queryparams" : queryParams});
     }
 
-    function _constructQueryString(filter, metadata, moreParams) {
-        return Mustache.render(KULER_QUERY_STRING, {"filter": filter, "maxNumber": MAX_THEMES, "metadata": metadata, "moreParams": moreParams});
+    function buildQueryString(params) {
+        var keys = Object.keys(params).sort(),
+            args = keys.map(function (key) {
+                var value = encodeURIComponent(params[key]);
+                return key + "=" + value;
+            });
+
+        return "?" + args.join("&");
     }
 
     function _constructMyThemesRequestURL() {
-        var queryParams = _constructQueryString("my_themes", "all");
+        var queryParams = buildQueryString({"filter": "my_themes", "maxNumber": MAX_THEMES, "metadata": "all"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructMyFavoritesRequestURL() {
-        var queryParams = _constructQueryString("likes", "all");
+        var queryParams =  buildQueryString({"filter": "likes", "maxNumber": MAX_THEMES, "metadata": "all"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructRandomThemesRequestURL() {
-        var queryParams = _constructQueryString("public", "all", "&sort=random");
+        var queryParams =  buildQueryString({"filter": "public", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "random"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 
     function _constructPopularThemesRequestURL() {
-        var queryParams = _constructQueryString("filter", "all", "&sort=view_count&time=month");
+        var queryParams =  buildQueryString({"filter": "filter", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "view_count", "time": "month"});
         return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
     }
 

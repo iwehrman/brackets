@@ -29,8 +29,6 @@ define(function (require, exports, module) {
 
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils");
 
-    require("thirdparty/jquery.mockjax.js");
-
     var TEST_KULER_JSON = require("text!unittest-files/mytheme-kuler.json");
 
     describe("Kuler", function () {
@@ -59,26 +57,6 @@ define(function (require, exports, module) {
                 extensionRequire = null;
                 brackets = null;
                 testWindow = null;
-            });
-        });
-
-        it("should be able to retrieve Themes for the currently logged-in user", function () {
-            var promise;
-
-            runs(function () {
-                promise = Kuler.getMyThemes(true);
-
-                waitsForDone(promise, "Get My Themes", 5000);
-            });
-        });
-
-        it("should be able to retrieve Favorite Themes for the currently logged-in user", function () {
-            var promise;
-
-            runs(function () {
-                promise = Kuler.getFavoriteThemes(true);
-
-                waitsForDone(promise, "Get FavoriteThemes", 5000);
             });
         });
 
