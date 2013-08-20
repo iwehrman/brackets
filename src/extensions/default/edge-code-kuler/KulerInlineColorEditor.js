@@ -153,27 +153,45 @@ define(function (require, exports, module) {
                 }
             }
             
-            var $firstColorItem = colorEditor.$selectionBase,
+            var $menubar = this.$menubar,
+                $firstColorItem = colorEditor.$selectionBase,
                 $lastKulerItem = this.$lastKulerItem,
                 $lastColorItem = this.$lastColorItem;
 
+            $menubar.off(".kuler");
             $lastColorItem.off(".kuler");
             $firstKulerItem.off(".kuler");
             $lastKulerItem.off(".kuler");
             $firstColorItem.off(".kuler");
             
-            // tab forward from last focusable color picker element to first Kuler swatch
+            // tab forward from last focusable color picker element to Kuler menu
             $lastColorItem.on("keydown.kuler", function (event) {
+                if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
+                    $menubar.focus();
+                    return false;
+                }
+            });
+            
+            // tab backward from Kuler menu to last focusable color picker element
+            $menubar.on("keydown.kuler", function (event) {
+                if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
+                    $lastColorItem.focus();
+                    return false;
+                }
+            });
+            
+            // tab forward from Kuler menu to first Kuler swatch
+            $menubar.on("keydown.kuler", function (event) {
                 if (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey) {
                     $firstKulerItem.focus();
                     return false;
                 }
             });
             
-            // tab backward from first Kuler swatch to last focusable color picker element
+            // tab backward from first Kuler swatch to Kuler menu
             $firstKulerItem.on("keydown.kuler", function (event) {
                 if (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey) {
-                    $lastColorItem.focus();
+                    $menubar.focus();
                     return false;
                 }
             });
@@ -281,12 +299,14 @@ define(function (require, exports, module) {
             $loading.hide();
         };
         
-        KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
-            var $kuler              = this.$kuler,
+        KulerInlineColorEditor.prototype._toggleKulerMenu = function (event) {
+            var cm                  = EditorManager.getCurrentFullEditor()._codeMirror,
+                $kuler              = this.$kuler,
                 $themes             = this.$themes,
                 $nothemes           = this.$nothemes,
                 $loading            = this.$loading,
                 $title              = this.$title,
+                $menubar            = this.$menubar,
                 colorEditor         = this.colorEditor,
                 $kulerMenuDropdown  = this.$kulerMenuDropdown,
                 self                = this;
@@ -310,32 +330,72 @@ define(function (require, exports, module) {
             function cleanupDropdown() {
                 $("html").off("click", closeDropdown);
                 $("#titlebar .nav").off("click", closeDropdown);
-                codemirror.off("scroll", closeDropdown);
+                cm.off("scroll", closeDropdown);
                 $kulerMenuDropdown = null;
+                $menubar.focus();
             }
-            /**
-             * Adds the click and mouse enter/leave events to the dropdown
+            
+            /*
+             * Load the collection that corresponds to the selected menu item
              */
-            function _handleListEvents() {
-                $kulerMenuDropdown.click(function (e) {
-                    var $link = $(e.target).closest("a"),
-                        kulerCollection = $link.data("collection"),
-                        newWidth;
+            function handleMenuItemSelect(event) {
+                var $item = $(event.target).closest("li"),
+                    $anchor = $item.children().first(),
+                    kulerCollection = $anchor.data("collection");
+                
+                if (kulerCollection) {
+                    var themesPromise = self._getThemes(kulerCollection);
                     
-                    if (kulerCollection) {
-                        var themesPromise = self._getThemes(kulerCollection);
-                        
-                        $themes.hide();
-                        $nothemes.hide();
-                        $loading.show();
-                        
-                        themesPromise.done(function (data) {
-                            self._displayThemes(data, true);
-                        });
-                        closeDropdown();
+                    $themes.hide();
+                    $nothemes.hide();
+                    $loading.show();
+                    
+                    closeDropdown();
+                    themesPromise.done(function (data) {
+                        self._displayThemes(data, true);
+                    });
+                }
+            }
+            
+            /*
+             * Handle tab and arrow navigation among menu items
+             */
+            function handleMenuNavigate(event) {
+                var $item = $(event.target).closest("li"),
+                    $next;
+                
+                if (event.keyCode === KeyEvent.DOM_VK_DOWN ||
+                        (event.keyCode === KeyEvent.DOM_VK_TAB && !event.shiftKey)) {
+                    $next = $item.next();
+                } else if (event.keyCode === KeyEvent.DOM_VK_UP ||
+                        (event.keyCode === KeyEvent.DOM_VK_TAB && event.shiftKey)) {
+                    $next = $item.prev();
+                }
+                
+                $next.focus();
+            }
+            
+            /*
+             * Handle menu list item events
+             */
+            function _handleListEvent(event) {
+                if (event.type === "click") {
+                    handleMenuItemSelect(event);
+                    return false;
+                } else if (event.type === "keydown") {
+                    switch (event.keyCode) {
+                    case KeyEvent.DOM_VK_ENTER:
+                    case KeyEvent.DOM_VK_RETURN:
+                    case KeyEvent.DOM_VK_SPACE:
+                        handleMenuItemSelect(event);
+                        return false;
+                    case KeyEvent.DOM_VK_UP:
+                    case KeyEvent.DOM_VK_DOWN:
+                    case KeyEvent.DOM_VK_TAB:
+                        handleMenuNavigate(event);
+                        return false;
                     }
-                    
-                });
+                }
             }
 
             Menus.closeAll();
@@ -343,19 +403,21 @@ define(function (require, exports, module) {
             // TODO: Can't just use Bootstrap 1.4 dropdowns for this since they're hard-coded to
             // assume that the dropdown is inside a top-level menubar created using <li>s.
             // Have to do this stopProp to avoid the html click handler from firing when this returns.
-            e.stopPropagation();
+            event.stopPropagation();
             
-            var toggleOffset = this.$kulerMenuDropdownToggle.offset(),
+            var toggleOffset = this.$menubar.offset(),
                 leftOffset = toggleOffset.left - 24,
                 toggleDisplay = $("#kuler-dropdown").is(':visible') ? "none" : "inline";
             
             $kulerMenuDropdown
                 .css({
                     left: leftOffset,
-                    top: toggleOffset.top + this.$kulerMenuDropdownToggle.outerHeight(),
+                    top: toggleOffset.top + this.$menubar.outerHeight(),
                     display: toggleDisplay
                 })
                 .appendTo($("body"));
+            
+            $kulerMenuDropdown.children().first().focus();
             
             PopUpManager.addPopUp($kulerMenuDropdown, cleanupDropdown, true);
             
@@ -364,15 +426,32 @@ define(function (require, exports, module) {
             $("html").on("click", closeDropdown);
             
             // close dropdown when editor scrolls
-            codemirror.on("scroll", closeDropdown);
+            cm.on("scroll", closeDropdown);
             
             // Hacky: if we detect a click in the menubar, close ourselves.
             // TODO: again, we should have centralized popup management.
             $("#titlebar .nav").on("click", closeDropdown);
             
-            _handleListEvents();
+            $kulerMenuDropdown.on("click keydown", _handleListEvent);
         };
 
+        /*
+         * Handle click and keydown events on the menubar
+         */
+        KulerInlineColorEditor.prototype._handleMenubarEvent = function (event) {
+            if (event.type === "keydown") {
+                switch (event.keyCode) {
+                case KeyEvent.DOM_VK_ENTER:
+                case KeyEvent.DOM_VK_RETURN:
+                case KeyEvent.DOM_VK_SPACE:
+                    this._toggleKulerMenu(event);
+                    return false;
+                }
+            } else if (event.type === "click") {
+                this._toggleKulerMenu(event);
+                return false;
+            }
+        };
         
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
@@ -383,9 +462,11 @@ define(function (require, exports, module) {
                 $htmlContent    = this.$htmlContent,
                 kuler           = kulerColorEditorTemplate(Strings),
                 $kuler          = $(kuler),
+                $menuDropdown   = $(kulerMenuTemplate),
                 $themes         = $kuler.find(".kuler-themes"),
                 $nothemes       = $kuler.find(".kuler-no-themes"),
                 $loading        = $kuler.find(".kuler-loading"),
+                $menubar      = $kuler.find(".kuler-collection-title"),
                 $title          = $kuler.find(".kuler-dropdown-title"),
                 $lastKulerItem  = $kuler.find("a.kuler-more-info"),
                 $scroller       = $kuler.find(".kuler-scroller"),
@@ -396,16 +477,17 @@ define(function (require, exports, module) {
             this.$nothemes = $nothemes;
             this.$loading = $loading;
             this.$title = $title;
-            this.$kulerMenuDropdown = $(kulerMenuTemplate);
+            this.$menubar = $menubar;
+            this.$kulerMenuDropdown = $menuDropdown;
             this.$lastKulerItem = $lastKulerItem;
             this.$scroller = $scroller;
             
             $loading.show();
 
-            $kuler.on("click", "a", self._handleLinkClick);
-            $scroller.on("mousewheel", self._handleWheelScroll.bind(self));
-            this.$kulerMenuDropdownToggle = $kuler.find(".kuler-collection-title")
-                .click(self._toggleKulerMenu.bind(self, EditorManager.getCurrentFullEditor()._codeMirror));
+            $kuler.on("click", "a", this._handleLinkClick);
+            $scroller.on("mousewheel", this._handleWheelScroll.bind(this));
+            $menubar.on("click keydown", this._handleMenubarEvent.bind(this));
+            
             this.$htmlContent.append($kuler);
             
             // get the last collection of themes displayed in the Kuler panel (or default to My Themes)
@@ -423,17 +505,20 @@ define(function (require, exports, module) {
             return deferred.promise();
         };
 
-        
+        /**
+         * Called once content is parented in the host editor's DOM.
+         */
         KulerInlineColorEditor.prototype.onAdded = function () {
             KulerInlineColorEditor.prototype.parentClass.onAdded.apply(this, arguments);
 
             var LEFT_MARGIN = 15;
             
-            var self = this,
-                $colorEditor = this.$htmlContent.find(".color-editor"),
-                $kuler = this.$htmlContent.find(".kuler"),
-                children = $colorEditor.children(),
-                $list = $(children[1]),
+            var displayThemes = this._displayThemes.bind(this),
+                activeCollection = this.activeCollection,
+                $kuler = this.$kuler,
+                $scroller = this.$scroller,
+                $colorEditor = this.colorEditor.$element,
+                $list = $colorEditor.children().last(),
                 kulerOffset = {
                     left: $list.offset().left + $list.outerWidth() + LEFT_MARGIN
                 };
@@ -442,29 +527,31 @@ define(function (require, exports, module) {
             
             // refresh the open collection of themes when the themes are updated
             $(kulerAPI).on("themesUpdated", function (event, collectionName, themes) {
-                if (collectionName === self.activeCollection &&
+                if (collectionName === activeCollection &&
                         collectionName !== kulerAPI.COLLECTION_RANDOM) {
                     
-                    var $focusedElement = self.$kuler.find(":focus"),
-                        scrollY         = self.$scroller.scrollTop();
+                    var $focusedElement = $kuler.find(":focus"),
+                        scrollY         = $scroller.scrollTop();
                     
-                    self._displayThemes(themes, false);
+                    displayThemes(themes, false);
                     
                     // restore focus to the previously focused element
                     var id = $focusedElement.attr("id"),
                         selector = "#" + id,
-                        $newElement = self.$kuler.find(selector);
+                        $newElement = $kuler.find(selector);
                     
                     if ($newElement.length === 1) {
                         $newElement.attr("tabindex", 0);
                         $newElement.focus();
-                        self.$scroller.scrollTop(scrollY);
+                        $scroller.scrollTop(scrollY);
                     }
                 }
             });
         };
         
-        
+        /**
+         * Called any time inline editor is closed, whether manually or automatically.
+         */
         KulerInlineColorEditor.prototype.onClosed = function () {
             KulerInlineColorEditor.prototype.parentClass.onAdded.apply(this, arguments);
             
