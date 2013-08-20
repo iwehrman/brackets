@@ -85,17 +85,13 @@ define(function (require, exports, module) {
         
         // warm up the cache
         KulerAPI.loadCachedThemesFromPrefs();
-        KulerAPI.getMyThemes();
-        KulerAPI.getFavoriteThemes();
-        KulerAPI.getRandomThemes();
-        KulerAPI.getPopularThemes();
+        KulerAPI.collectionNames.forEach(KulerAPI.getThemes);
         
-        // refresh cache whenever focus returns to the window
+        // force refresh cache whenever focus returns to the window
         window.addEventListener("focus", function () {
-            KulerAPI.getMyThemes(true); // force refresh
-            KulerAPI.getFavoriteThemes(true);
-            KulerAPI.getPopularThemes(true);
-            KulerAPI.getRandomThemes(true);
+            KulerAPI.collectionNames.forEach(function (name) {
+                KulerAPI.getThemes(name, true);
+            });
         });
     });
 });
