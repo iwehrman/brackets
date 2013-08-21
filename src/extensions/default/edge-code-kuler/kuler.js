@@ -405,14 +405,9 @@ define(function (require, exports, module) {
     exports.getLastDisplayedCollection  = getLastDisplayedCollection;
     exports.setLastDisplayedCollection  = setLastDisplayedCollection;
     exports.flushCachedThemes           = flushCachedThemes;
-    
-    exports.collectionNames = [
-        COLLECTION_MY_THEMES,
-        COLLECTION_FAVORITES,
-        COLLECTION_POPULAR,
-        COLLECTION_RANDOM
-    ];
+    exports.collectionNames             = Object.keys(COLLECTION_URLS);
 
-    // for testing purpose
-    exports._executeAjaxRequest    = _executeAjaxRequest;
+    // for testing purposes
+    exports.COLLECTION_URLS     = COLLECTION_URLS;
+    exports._executeAjaxRequest = _executeAjaxRequest;
 });

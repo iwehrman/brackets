@@ -70,7 +70,7 @@ define(function (require, exports, module) {
                 };
 
                 Kuler.flushCachedThemes();
-                promise = Kuler.getMyThemes();
+                promise = Kuler.getThemes("MY_KULER_THEMES");
 
                 waitsForFail(promise, "Nothing will be returned", 5000);
             });
@@ -79,38 +79,28 @@ define(function (require, exports, module) {
         });
 
         describe("Return proper kuler resource urls", function () {
-            it("should return proper resource URLs", function () {
-                var themesUrl = Kuler._constructKulerURL('themes');
-
-                expect(themesUrl).toBe("https://www.adobeku.com/api/v2/themes");
-
-                var searchUrl = Kuler._constructKulerURL('search');
-
-                expect(searchUrl).toBe("https://www.adobeku.com/api/v2/search");
-            });
-
             it("should return proper request url for my themes", function () {
-                var myThemesUrl = Kuler._constructMyThemesRequestURL();
+                var url = Kuler.COLLECTION_URLS.MY_KULER_THEMES;
 
-                expect(myThemesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=my_themes&maxNumber=60&metadata=all");
+                expect(url).toBe("https://www.adobeku.com/api/v2/themes?filter=my_themes&maxNumber=60&metadata=all");
             });
 
             it("should return proper request url for my favorites", function () {
-                var myFavoritesUrl = Kuler._constructMyFavoritesRequestURL();
+                var url = Kuler.COLLECTION_URLS.FAVORITE_KULER_THEMES;
 
-                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=likes&maxNumber=60&metadata=all");
+                expect(url).toBe("https://www.adobeku.com/api/v2/themes?filter=likes&maxNumber=60&metadata=all");
             });
 
             it("should return proper request url for random themes", function () {
-                var myFavoritesUrl = Kuler._constructRandomThemesRequestURL();
+                var url = Kuler.COLLECTION_URLS.RANDOM_KULER_THEMES;
 
-                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=public&maxNumber=60&metadata=all&sort=random");
+                expect(url).toBe("https://www.adobeku.com/api/v2/themes?filter=public&maxNumber=60&metadata=all&sort=random");
             });
 
             it("should return proper request url for popular themes", function () {
-                var myFavoritesUrl = Kuler._constructPopularThemesRequestURL();
+                var url = Kuler.COLLECTION_URLS.POPULAR_KULER_THEMES;
 
-                expect(myFavoritesUrl).toBe("https://www.adobeku.com/api/v2/themes?filter=public&maxNumber=60&metadata=all&sort=view_count&time=month");
+                expect(url).toBe("https://www.adobeku.com/api/v2/themes?filter=public&maxNumber=60&metadata=all&sort=view_count&time=month");
             });
         });
 
@@ -130,7 +120,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     Kuler.flushCachedThemes();
-                    promise = Kuler.getMyThemes(true);
+                    promise = Kuler.getThemes("MY_KULER_THEMES", true);
 
                     promise.done(function (parsedJSON) {
                         theme = parsedJSON;
@@ -173,7 +163,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     Kuler.flushCachedThemes();
-                    promise = Kuler.getMyThemes(true);
+                    promise = Kuler.getThemes("MY_KULER_THEMES", true);
 
                     promise.done(function (parsedJSON) {
                         theme = parsedJSON;
@@ -211,7 +201,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     Kuler.flushCachedThemes();
-                    promise = Kuler.getMyThemes(true);
+                    promise = Kuler.getThemes("MY_KULER_THEMES", true);
 
                     promise.done(function (parsedJSON) {
                         theme1 = parsedJSON;
@@ -221,7 +211,7 @@ define(function (require, exports, module) {
                 });
 
                 runs(function () {
-                    promise = Kuler.getMyThemes();
+                    promise = Kuler.getThemes("MY_KULER_THEMES");
 
                     promise.done(function (parsedJSON) {
                         theme2 = parsedJSON;
