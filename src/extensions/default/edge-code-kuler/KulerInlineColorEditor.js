@@ -137,9 +137,6 @@ define(function (require, exports, module) {
          * forward. In the other direction, this connects first focusable color picker
          * element to the last focusable Kuler element, and the first focusable Kuler
          * element to the last focusable color picker element.
-         * 
-         * Assumes that this.$lastKulerItem and this.$lastColorItem, which are static,
-         * have already been initialized.
          *
          * @param {jQuery.Object} $firstKulerItem - the first focusable Kuler element
          */
