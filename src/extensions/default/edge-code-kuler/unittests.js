@@ -70,7 +70,7 @@ define(function (require, exports, module) {
                 };
 
                 Kuler.flushCachedThemes();
-                promise = Kuler.getThemes("MY_KULER_THEMES");
+                promise = Kuler.getThemes(Kuler.COLLECTION_MY_THEMES);
 
                 waitsForFail(promise, "Nothing will be returned", 5000);
             });
@@ -163,7 +163,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     Kuler.flushCachedThemes();
-                    promise = Kuler.getThemes("MY_KULER_THEMES", true);
+                    promise = Kuler.getThemes(Kuler.COLLECTION_MY_THEMES, true);
 
                     promise.done(function (parsedJSON) {
                         theme = parsedJSON;
@@ -201,7 +201,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     Kuler.flushCachedThemes();
-                    promise = Kuler.getThemes("MY_KULER_THEMES", true);
+                    promise = Kuler.getThemes(Kuler.COLLECTION_MY_THEMES, true);
 
                     promise.done(function (parsedJSON) {
                         theme1 = parsedJSON;
@@ -211,7 +211,7 @@ define(function (require, exports, module) {
                 });
 
                 runs(function () {
-                    promise = Kuler.getThemes("MY_KULER_THEMES");
+                    promise = Kuler.getThemes(Kuler.COLLECTION_MY_THEMES);
 
                     promise.done(function (parsedJSON) {
                         theme2 = parsedJSON;
