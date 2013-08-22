@@ -45,7 +45,7 @@ define(function (require, exports, module) {
     var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
         kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML),
         kulerMenuTemplate           = (function () {
-            var keys = kulerAPI.collectionNames,
+            var keys = kulerAPI.orderedCollectionNames,
                 collections = keys.map(function (key) {
                     return {
                         key: key,
@@ -408,7 +408,7 @@ define(function (require, exports, module) {
             
             // get the last collection of themes displayed in the Kuler panel (or default to My Themes)
             var lastDisplayedCollection = kulerAPI.getLastDisplayedCollection(),
-                collectionName = lastDisplayedCollection || kulerAPI.collectionNames[0],
+                collectionName = lastDisplayedCollection || kulerAPI.orderedCollectionNames[0],
                 themesPromise = self._getThemes(collectionName);
 
             themesPromise.done(function (data) {
@@ -441,7 +441,7 @@ define(function (require, exports, module) {
             // refresh the open collection of themes when the themes are updated
             $(kulerAPI).on("themesUpdated", function (event, collectionName, themes) {
                 if (collectionName === self.activeCollection &&
-                        collectionName !== "RANDOM_KULER_THEMES") {
+                        collectionName !== kulerAPI.COLLECTION_RANDOM_THEMES) {
                     
                     var $focusedElement = self.$kuler.find(":focus");
                     

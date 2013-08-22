@@ -85,11 +85,11 @@ define(function (require, exports, module) {
         
         // warm up the cache
         KulerAPI.loadCachedThemesFromPrefs();
-        KulerAPI.collectionNames.forEach(KulerAPI.getThemes);
+        KulerAPI.orderedCollectionNames.forEach(KulerAPI.getThemes);
         
         // force refresh cache whenever focus returns to the window
         window.addEventListener("focus", function () {
-            KulerAPI.collectionNames.forEach(function (name) {
+            KulerAPI.orderedCollectionNames.forEach(function (name) {
                 KulerAPI.getThemes(name, true);
             });
         });

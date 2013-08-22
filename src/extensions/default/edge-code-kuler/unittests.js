@@ -120,7 +120,7 @@ define(function (require, exports, module) {
 
                 runs(function () {
                     Kuler.flushCachedThemes();
-                    promise = Kuler.getThemes("MY_KULER_THEMES", true);
+                    promise = Kuler.getThemes(Kuler.COLLECTION_MY_THEMES, true);
 
                     promise.done(function (parsedJSON) {
                         theme = parsedJSON;

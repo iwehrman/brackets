@@ -55,30 +55,33 @@ define(function (require, exports, module) {
         COLLECTION_RANDOM       = "RANDOM_KULER_THEMES";
     
     var COLLECTION_URLS = (function () {
-        var COLLECTION_QUERY_PARAMS = {
-            MY_KULER_THEMES: {
-                "filter": "my_themes",
-                "maxNumber": MAX_THEMES,
-                "metadata": "all"
-            },
-            FAVORITE_KULER_THEMES: {
-                "filter": "likes",
-                "maxNumber": MAX_THEMES,
-                "metadata": "all"
-            },
-            POPULAR_KULER_THEMES: {
-                "filter": "public",
-                "maxNumber": MAX_THEMES,
-                "metadata": "all",
-                "sort": "view_count",
-                "time": "month"
-            },
-            RANDOM_KULER_THEMES: {
-                "filter": "public",
-                "maxNumber": MAX_THEMES,
-                "metadata": "all",
-                "sort": "random"
-            }
+        var queryParams = {};
+            
+        queryParams[COLLECTION_MY_THEMES] = {
+            "filter": "my_themes",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all"
+        };
+        
+        queryParams[COLLECTION_FAVORITES] = {
+            "filter": "likes",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all"
+        };
+        
+        queryParams[COLLECTION_POPULAR] = {
+            "filter": "public",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all",
+            "sort": "view_count",
+            "time": "month"
+        };
+
+        queryParams[COLLECTION_RANDOM] = {
+            "filter": "public",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all",
+            "sort": "random"
         };
         
         function getQueryString(params) {
@@ -92,7 +95,7 @@ define(function (require, exports, module) {
         }
         
         function getURL(collection) {
-            var params = COLLECTION_QUERY_PARAMS[collection],
+            var params = queryParams[collection],
                 querystring = getQueryString(params),
                 settings = {
                     resource: KULER_RESOURCE_THEMES,
@@ -101,7 +104,7 @@ define(function (require, exports, module) {
             return Mustache.render(KULER_PRODUCTION_URL, settings);
         }
 
-        return Object.keys(COLLECTION_QUERY_PARAMS).reduce(function (prev, collectionName) {
+        return Object.keys(queryParams).reduce(function (prev, collectionName) {
             prev[collectionName] = getURL(collectionName);
             return prev;
         }, {});
@@ -405,7 +408,15 @@ define(function (require, exports, module) {
     exports.getLastDisplayedCollection  = getLastDisplayedCollection;
     exports.setLastDisplayedCollection  = setLastDisplayedCollection;
     exports.flushCachedThemes           = flushCachedThemes;
-    exports.collectionNames             = Object.keys(COLLECTION_URLS);
+    
+    exports.COLLECTION_MY_THEMES    = COLLECTION_MY_THEMES;
+    exports.COLLECTION_FAVORITES    = COLLECTION_FAVORITES;
+    exports.COLLECTION_POPULAR      = COLLECTION_POPULAR;
+    exports.COLLECTION_RANDOM       = COLLECTION_RANDOM;
+    exports.orderedCollectionNames  = [COLLECTION_MY_THEMES,
+                                       COLLECTION_FAVORITES,
+                                       COLLECTION_POPULAR,
+                                       COLLECTION_RANDOM];
 
     // for testing purposes
     exports.COLLECTION_URLS     = COLLECTION_URLS;
