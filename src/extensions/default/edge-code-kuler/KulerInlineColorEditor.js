@@ -388,6 +388,7 @@ define(function (require, exports, module) {
                 $loading        = $kuler.find(".kuler-loading"),
                 $title          = $kuler.find(".kuler-dropdown-title"),
                 $lastKulerItem  = $kuler.find("a.kuler-more-info"),
+                $scroller       = $kuler.find(".kuler-scroller"),
                 $firstKulerItem;
 
             this.$kuler = $kuler;
@@ -397,11 +398,12 @@ define(function (require, exports, module) {
             this.$title = $title;
             this.$kulerMenuDropdown = $(kulerMenuTemplate);
             this.$lastKulerItem = $lastKulerItem;
+            this.$scroller = $scroller;
             
             $loading.show();
 
             $kuler.on("click", "a", self._handleLinkClick);
-            $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll.bind(self));
+            $scroller.on("mousewheel", self._handleWheelScroll.bind(self));
             this.$kulerMenuDropdownToggle = $kuler.find(".kuler-collection-title")
                 .click(self._toggleKulerMenu.bind(self, EditorManager.getCurrentFullEditor()._codeMirror));
             this.$htmlContent.append($kuler);
@@ -443,7 +445,8 @@ define(function (require, exports, module) {
                 if (collectionName === self.activeCollection &&
                         collectionName !== kulerAPI.COLLECTION_RANDOM_THEMES) {
                     
-                    var $focusedElement = self.$kuler.find(":focus");
+                    var $focusedElement = self.$kuler.find(":focus"),
+                        scrollY         = self.$scroller.scrollTop();
                     
                     self._displayThemes(themes, false);
                     
@@ -455,6 +458,7 @@ define(function (require, exports, module) {
                     if ($newElement.length === 1) {
                         $newElement.attr("tabindex", 0);
                         $newElement.focus();
+                        self.$scroller.scrollTop(scrollY);
                     }
                 }
             });
