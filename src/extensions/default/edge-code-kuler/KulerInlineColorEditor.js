@@ -21,8 +21,8 @@
  * 
  */
 
-/*jslint vars: true, plusplus: true, nomen: true, regexp: true, maxerr: 50 */
-/*global define, brackets, $, window, Mustache, tinycolor */
+/*jslint vars: true, plusplus: true, nomen: true, regexp: true, maxerr: 50, browser: true */
+/*global define, brackets, $, Mustache, tinycolor */
 
 define(function (require, exports, module) {
     "use strict";
@@ -37,11 +37,6 @@ define(function (require, exports, module) {
         Strings                 = require("strings"),
         kulerAPI                = require("kuler"),
         tinycolor;
- 
-    var MY_THEMES = "MY_KULER_THEMES",
-        FAVORITE_THEMES = "FAVORITE_KULER_THEMES",
-        POPULAR_THEMES = "POPULAR_KULER_THEMES",
-        RANDOM_THEMES = "RANDOM_KULER_THEMES";
     
     var _kulerColorEditorHTML   = require("text!html/KulerColorEditorTemplate.html"),
         _kulerThemeHTML         = require("text!html/KulerThemeTemplate.html"),
@@ -50,7 +45,7 @@ define(function (require, exports, module) {
     var kulerColorEditorTemplate    = Mustache.compile(_kulerColorEditorHTML),
         kulerThemeTemplate          = Mustache.compile(_kulerThemeHTML),
         kulerMenuTemplate           = (function () {
-            var keys = [MY_THEMES, FAVORITE_THEMES, POPULAR_THEMES, RANDOM_THEMES],
+            var keys = kulerAPI.orderedCollectionNames,
                 collections = keys.map(function (key) {
                     return {
                         key: key,
@@ -63,6 +58,9 @@ define(function (require, exports, module) {
             
             return Mustache.render(_kulerMenuHTML, settings);
         }());
+    
+    // used to generate unique IDs for multiple instances of the inline editor
+    var instanceCounter = 0;
 
     function getConstructor(InlineColorEditor, _tinycolor) {
         
@@ -73,19 +71,12 @@ define(function (require, exports, module) {
          */
         function KulerInlineColorEditor() {
             InlineColorEditor.apply(this, arguments);
+            this.idPrefix = "kuler-" + instanceCounter++;
         }
         
         KulerInlineColorEditor.prototype = Object.create(InlineColorEditor.prototype);
         KulerInlineColorEditor.prototype.constructor = KulerInlineColorEditor;
         KulerInlineColorEditor.prototype.parentClass = InlineColorEditor.prototype;
-        
-        /**
-         * Update the width of the collection title based on the content
-         */
-        KulerInlineColorEditor.prototype._updateCollectionTitleWidth = function () {
-            var newWidth = this.$title.width() + this.$kuler.find(".kuler-dropdown-arrow").width() + 8;
-            this.$kuler.find(".kuler-collection-title").css("width", newWidth);
-        };
 
         /**
          * Fetch My Themes and update UI
@@ -94,20 +85,13 @@ define(function (require, exports, module) {
          *      a promise that resolves when the requested themes collection has been fetched from Kuler
          */
         KulerInlineColorEditor.prototype._getThemes = function (collectionName) {
+            this.activeCollection = collectionName;
             this.$title.text(Strings[collectionName]);
-            this._updateCollectionTitleWidth();
-            switch (collectionName) {
-            case MY_THEMES:
-                return kulerAPI.getMyThemes();
-            case FAVORITE_THEMES:
-                return kulerAPI.getFavoriteThemes();
-            case POPULAR_THEMES:
-                return kulerAPI.getPopularThemes();
-            case RANDOM_THEMES:
-                return kulerAPI.getRandomThemes();
-            default:
-                throw new Error("Unknown Kuler theme collection: " + collectionName);
-            }
+            
+            // remember this collection as the last displayed
+            kulerAPI.setLastDisplayedCollection(collectionName);
+            
+            return kulerAPI.getThemes(collectionName);
         };
         
         KulerInlineColorEditor.prototype._handleLinkClick = function (event) {
@@ -153,18 +137,26 @@ define(function (require, exports, module) {
          * forward. In the other direction, this connects first focusable color picker
          * element to the last focusable Kuler element, and the first focusable Kuler
          * element to the last focusable color picker element.
-         * 
-         * Assumes that this.$lastKulerItem and this.$lastColorItem, which are static,
-         * have already been initialized.
          *
          * @param {jQuery.Object} $firstKulerItem - the first focusable Kuler element
          */
         KulerInlineColorEditor.prototype._addKeydownHandlers = function ($firstKulerItem) {
-            var colorEditor = this.colorEditor,
-                $firstColorItem = colorEditor.$selectionBase,
+            var colorEditor = this.colorEditor;
+            if (!this.$lastColorItem) {
+                var $swatchItems = colorEditor.$swatches.find("li");
+                if ($swatchItems.length > 0) {
+                    // override tab behavior of last color editor swatch, if it exists
+                    this.$lastColorItem = $swatchItems.last();
+                } else {
+                    // otherwise override the HSL button
+                    this.$lastColorItem = colorEditor.$hslButton;
+                }
+            }
+            
+            var $firstColorItem = colorEditor.$selectionBase,
                 $lastKulerItem = this.$lastKulerItem,
                 $lastColorItem = this.$lastColorItem;
-            
+
             $lastColorItem.off(".kuler");
             $firstKulerItem.off(".kuler");
             $lastKulerItem.off(".kuler");
@@ -205,24 +197,30 @@ define(function (require, exports, module) {
 
         /**
          * build the color swatch matrix and attach event handlers
-         * @return {boolean} - returns false if there are no swatches, true otherwise              
+         *
+         * @param {Collection} data - Kuler theme collection object
+         * @param {boolean} focusFirstElem - Whether to give focus to the first Kuler element
          */
-        KulerInlineColorEditor.prototype._handleThemesPromise = function (data) {
+        KulerInlineColorEditor.prototype._displayThemes = function (data, focusFirstElem) {
             var $themes = this.$themes,
                 $nothemes = this.$nothemes,
                 $loading = this.$loading,
                 $title = this.$title,
                 colorEditor = this.colorEditor,
-                returnVal = false;
+                idPrefix = this.idPrefix,
+                $firstKulerItem;
             
             $themes.empty();
             if (data.themes.length > 0) {
                 data.themes.forEach(function (theme) {
-                    theme.swatches.forEach(function (swatch) {
-                        var color = tinycolor(swatch.hex);
+                    theme.swatches.forEach(function (swatch, index) {
+                        var color = tinycolor(swatch.hex),
+                            id = [idPrefix, theme.id, index].join("-");
+                            
                         swatch.hex = color.toHexString();
                         swatch.rgb = color.toRgbString();
                         swatch.hsl = color.toHslString();
+                        swatch.id = id;
                     });
                     
                     function handleSwatchAction(event) {
@@ -245,6 +243,7 @@ define(function (require, exports, module) {
                         }
                     }
                     
+                    theme.titleId = [idPrefix, theme.id].join("-");
                     theme.length = theme.swatches.length;
                     
                     var themeHTML = kulerThemeTemplate(theme),
@@ -256,25 +255,30 @@ define(function (require, exports, module) {
                     
                     kulerAPI.getThemeURLInfo(theme).done(function (getUrl) {
                         var $title = $theme.find(".kuler-swatch-title"),
-                            $anchor;
-                        
-                        $title.wrap("<a href='#' tabindex='0'>");
-                        $anchor = $title.parent();
+                            $anchor = $title.parent();
+
+                        $anchor.attr("tabindex", 0);
+                        $anchor.attr("href", "#");
                         $anchor.on("click", function () {
                             NativeApp.openURLInDefaultBrowser(getUrl());
                             return false;
                         });
                     });
                 });
-                returnVal = true;
+                
+                $firstKulerItem = $themes.find(".kuler-swatch-block").first();
                 $themes.show();
             } else {
-                returnVal = false;
+                $firstKulerItem = this.$lastKulerItem;
                 $nothemes.show();
             }
             
+            if (focusFirstElem) {
+                $firstKulerItem.focus();
+            }
+            
+            this._addKeydownHandlers($firstKulerItem);
             $loading.hide();
-            return returnVal;
         };
         
         KulerInlineColorEditor.prototype._toggleKulerMenu = function (codemirror, e) {
@@ -319,25 +323,14 @@ define(function (require, exports, module) {
                         newWidth;
                     
                     if (kulerCollection) {
-                        this.themesPromise = self._getThemes(kulerCollection);
-                        var boundThemesHandler = KulerInlineColorEditor.prototype._handleThemesPromise.bind(self);
+                        var themesPromise = self._getThemes(kulerCollection);
                         
                         $themes.hide();
                         $nothemes.hide();
                         $loading.show();
-                        this.themesPromise.done(function (data) {
-                            // remember this collection as the last displayed
-                            kulerAPI.setLastDisplayedCollection(kulerCollection);
-
-                            var $firstKulerItem;
-                            if (boundThemesHandler(data)) {
-                                $firstKulerItem = $themes.find(".kuler-swatch-block").first();
-                            } else {
-                                $firstKulerItem = self.$lastKulerItem;
-                            }
-                            
-                            self._addKeydownHandlers($firstKulerItem);
-                            $firstKulerItem.focus();
+                        
+                        themesPromise.done(function (data) {
+                            self._displayThemes(data, true);
                         });
                         closeDropdown();
                     }
@@ -383,7 +376,7 @@ define(function (require, exports, module) {
         
         KulerInlineColorEditor.prototype.load = function (hostEditor) {
             KulerInlineColorEditor.prototype.parentClass.load.call(this, hostEditor);
-            
+
             var self            = this,
                 deferred        = $.Deferred(),
                 colorEditor     = this.colorEditor,
@@ -395,6 +388,7 @@ define(function (require, exports, module) {
                 $loading        = $kuler.find(".kuler-loading"),
                 $title          = $kuler.find(".kuler-dropdown-title"),
                 $lastKulerItem  = $kuler.find("a.kuler-more-info"),
+                $scroller       = $kuler.find(".kuler-scroller"),
                 $firstKulerItem;
 
             this.$kuler = $kuler;
@@ -404,43 +398,27 @@ define(function (require, exports, module) {
             this.$title = $title;
             this.$kulerMenuDropdown = $(kulerMenuTemplate);
             this.$lastKulerItem = $lastKulerItem;
+            this.$scroller = $scroller;
             
             $loading.show();
+
+            $kuler.on("click", "a", self._handleLinkClick);
+            $scroller.on("mousewheel", self._handleWheelScroll.bind(self));
+            this.$kulerMenuDropdownToggle = $kuler.find(".kuler-collection-title")
+                .click(self._toggleKulerMenu.bind(self, EditorManager.getCurrentFullEditor()._codeMirror));
+            this.$htmlContent.append($kuler);
             
             // get the last collection of themes displayed in the Kuler panel (or default to My Themes)
-            var lastDisplayedCollection = kulerAPI.getLastDisplayedCollection();
-            this.themesPromise = self._getThemes(lastDisplayedCollection || MY_THEMES);
-            
-            this.themesPromise
-                .done(function (data) {
-                    if (self._handleThemesPromise(data)) {
-                        $firstKulerItem = $themes.find(".kuler-swatch-block").first();
-                    } else {
-                        $firstKulerItem = $lastKulerItem;
-                    }
-                    
-                    var $swatchItems = colorEditor.$swatches.find("li");
-                    if ($swatchItems.length > 0) {
-                        // override tab behavior of last color editor swatch, if it exists
-                        self.$lastColorItem = $swatchItems.last();
-                    } else {
-                        // otherwise override the HSL button
-                        self.$lastColorItem = colorEditor.$hslButton;
-                    }
-                    
-                    self._addKeydownHandlers($firstKulerItem);
-                                            
-                    $kuler.on("click", "a", self._handleLinkClick);
-                    $kuler.find(".kuler-scroller").on("mousewheel", self._handleWheelScroll.bind(self));
-                    self.$kulerMenuDropdownToggle = $kuler.find("#kuler-dropdown-toggle")
-                        .click(self._toggleKulerMenu.bind(self, EditorManager.getCurrentFullEditor()._codeMirror));
-        
-                    self.$htmlContent.append($kuler);
-                    deferred.resolve();
-                })
-                .fail(function (err) {
-                    deferred.reject(err);
-                });
+            var lastDisplayedCollection = kulerAPI.getLastDisplayedCollection(),
+                collectionName = lastDisplayedCollection || kulerAPI.orderedCollectionNames[0],
+                themesPromise = self._getThemes(collectionName);
+
+            themesPromise.done(function (data) {
+                self._displayThemes(data, false);
+                deferred.resolve();
+            }).fail(function (err) {
+                deferred.reject(err);
+            });
             
             return deferred.promise();
         };
@@ -448,9 +426,11 @@ define(function (require, exports, module) {
         
         KulerInlineColorEditor.prototype.onAdded = function () {
             KulerInlineColorEditor.prototype.parentClass.onAdded.apply(this, arguments);
-            
+
             var LEFT_MARGIN = 15;
-            var $colorEditor = this.$htmlContent.find(".color-editor"),
+            
+            var self = this,
+                $colorEditor = this.$htmlContent.find(".color-editor"),
                 $kuler = this.$htmlContent.find(".kuler"),
                 children = $colorEditor.children(),
                 $list = $(children[1]),
@@ -460,7 +440,35 @@ define(function (require, exports, module) {
             
             $kuler.offset(kulerOffset);
             
-            this._updateCollectionTitleWidth();
+            // refresh the open collection of themes when the themes are updated
+            $(kulerAPI).on("themesUpdated", function (event, collectionName, themes) {
+                if (collectionName === self.activeCollection &&
+                        collectionName !== kulerAPI.COLLECTION_RANDOM_THEMES) {
+                    
+                    var $focusedElement = self.$kuler.find(":focus"),
+                        scrollY         = self.$scroller.scrollTop();
+                    
+                    self._displayThemes(themes, false);
+                    
+                    // restore focus to the previously focused element
+                    var id = $focusedElement.attr("id"),
+                        selector = "#" + id,
+                        $newElement = self.$kuler.find(selector);
+                    
+                    if ($newElement.length === 1) {
+                        $newElement.attr("tabindex", 0);
+                        $newElement.focus();
+                        self.$scroller.scrollTop(scrollY);
+                    }
+                }
+            });
+        };
+        
+        
+        KulerInlineColorEditor.prototype.onClosed = function () {
+            KulerInlineColorEditor.prototype.parentClass.onAdded.apply(this, arguments);
+            
+            $(kulerAPI).off("themesUpdated");
         };
         
         return KulerInlineColorEditor;

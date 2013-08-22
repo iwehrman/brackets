@@ -31,7 +31,7 @@ define(function (require, exports, module) {
 
     var Strings = require("strings");
 
-    var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}{{{queryparams}}}",
+    var KULER_PRODUCTION_URL = "https://www.adobeku.com/api/v2/{{resource}}?{{{querystring}}}",
         KULER_RESOURCE_THEMES = "themes",
         KULER_WEB_CLIENT_ID = "KulerWeb1",
         EC_KULER_API_KEY = "DBDB768C3A1EF5A0AFFF91C28C77E66A",
@@ -39,21 +39,82 @@ define(function (require, exports, module) {
         PREFS_URLS_KEY = "KULER_URLS",
         PREFS_LAST_DISPLAYED_COLLECTION_KEY = "LAST_DISPLAYED_COLLECTION",
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
-
-    var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
-        IMS_JUMPTOKEN_SCOPE = "openid",
-        IMS_JUMPTOKEN_RESPONSE_TYPE = "token";
-
+    
     // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
     // themes fetched may not be bigger than 60. Otherwise the scrollbar leaves
     // an artifact on screen when it is being hidden.
     var MAX_THEMES = 60;
 
-    var prefs = PreferencesManager.getPreferenceStorage(module),
-        themesCache = {},
-        promiseCache = {},
-        timers = {},
-        jumpURLCache = {};
+    var IMS_JUMPTOKEN_URL = "https://ims-na1.adobelogin.com/ims/jumptoken/v1",
+        IMS_JUMPTOKEN_SCOPE = "openid",
+        IMS_JUMPTOKEN_RESPONSE_TYPE = "token";
+    
+    var COLLECTION_MY_THEMES    = "MY_KULER_THEMES",
+        COLLECTION_FAVORITES    = "FAVORITE_KULER_THEMES",
+        COLLECTION_POPULAR      = "POPULAR_KULER_THEMES",
+        COLLECTION_RANDOM       = "RANDOM_KULER_THEMES";
+    
+    var COLLECTION_URLS = (function () {
+        var queryParams = {};
+            
+        queryParams[COLLECTION_MY_THEMES] = {
+            "filter": "my_themes",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all"
+        };
+        
+        queryParams[COLLECTION_FAVORITES] = {
+            "filter": "likes",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all"
+        };
+        
+        queryParams[COLLECTION_POPULAR] = {
+            "filter": "public",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all",
+            "sort": "view_count",
+            "time": "month"
+        };
+
+        queryParams[COLLECTION_RANDOM] = {
+            "filter": "public",
+            "maxNumber": MAX_THEMES,
+            "metadata": "all",
+            "sort": "random"
+        };
+        
+        function getQueryString(params) {
+            var keys = Object.keys(params).sort(),
+                args = keys.map(function (key) {
+                    var value = encodeURIComponent(params[key]);
+                    return key + "=" + value;
+                });
+    
+            return args.join("&");
+        }
+        
+        function getURL(collection) {
+            var params = queryParams[collection],
+                querystring = getQueryString(params),
+                settings = {
+                    resource: KULER_RESOURCE_THEMES,
+                    querystring: querystring
+                };
+            return Mustache.render(KULER_PRODUCTION_URL, settings);
+        }
+
+        return Object.keys(queryParams).reduce(function (prev, collectionName) {
+            prev[collectionName] = getURL(collectionName);
+            return prev;
+        }, {});
+    }());
+    
+    var prefs           = PreferencesManager.getPreferenceStorage(module),
+        themesCache     = {},
+        promiseCache    = {},
+        timers          = {},
+        jumpURLCache    = {};
 
     /*
      * Load the set of cached themes URLs from the prefs. Each URL in the set
@@ -120,40 +181,6 @@ define(function (require, exports, module) {
         prefs.setValue(PREFS_URLS_KEY, {});
     }
 
-    function _constructKulerURL(resource, queryParams) {
-        return Mustache.render(KULER_PRODUCTION_URL, {"resource" : resource, "queryparams" : queryParams});
-    }
-
-    function buildQueryString(params) {
-        var keys = Object.keys(params).sort(),
-            args = keys.map(function (key) {
-                var value = encodeURIComponent(params[key]);
-                return key + "=" + value;
-            });
-
-        return "?" + args.join("&");
-    }
-
-    function _constructMyThemesRequestURL() {
-        var queryParams = buildQueryString({"filter": "my_themes", "maxNumber": MAX_THEMES, "metadata": "all"});
-        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
-    }
-
-    function _constructMyFavoritesRequestURL() {
-        var queryParams =  buildQueryString({"filter": "likes", "maxNumber": MAX_THEMES, "metadata": "all"});
-        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
-    }
-
-    function _constructRandomThemesRequestURL() {
-        var queryParams =  buildQueryString({"filter": "public", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "random"});
-        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
-    }
-
-    function _constructPopularThemesRequestURL() {
-        var queryParams =  buildQueryString({"filter": "public", "maxNumber": MAX_THEMES, "metadata": "all", "sort": "view_count", "time": "month"});
-        return _constructKulerURL(KULER_RESOURCE_THEMES, queryParams);
-    }
-
     function _executeAjaxRequest(requestConfig) {
         return $.ajax(requestConfig);
     }
@@ -167,8 +194,9 @@ define(function (require, exports, module) {
         return exports._executeAjaxRequest({url: kulerUrl, headers : headers});
     }
 
-    function _executeRequest(url) {
-        var deferred = new $.Deferred();
+    function _getThemesFromKuler(collectionName) {
+        var url = COLLECTION_URLS[collectionName],
+            deferred = new $.Deferred();
 
         if (brackets.authentication) {
             var accessTokenPromise = brackets.authentication.getAccessToken();
@@ -181,10 +209,8 @@ define(function (require, exports, module) {
                 }).fail(function (jqXHR, textStatus, errorThrown) {
                     deferred.reject(errorThrown);
                 });
-            });
-
-            accessTokenPromise.fail(function () {
-                deferred.reject();
+            }).fail(function (err) {
+                deferred.reject(err);
             });
         } else {
             deferred.reject();
@@ -193,44 +219,47 @@ define(function (require, exports, module) {
         return deferred.promise();
     }
 
-    function _getThemes(url, refresh) {
+    function getThemes(collectionName, refresh) {
         function _refreshThemes() {
-            var promise = promiseCache[url];
+            var promise = promiseCache[collectionName];
 
             if (promise) {
                 // return the not-yet-fulfilled promise
                 return promise;
             } else {
-                if (timers[url]) {
-                    clearTimeout(timers[url]);
-                    delete timers[url];
+                if (timers[collectionName]) {
+                    clearTimeout(timers[collectionName]);
+                    delete timers[collectionName];
                 }
 
-                promise = _executeRequest(url);
-                promiseCache[url] = promise;
+                promise = _getThemesFromKuler(collectionName);
+                promiseCache[collectionName] = promise;
 
                 promise.always(function () {
-                    delete promiseCache[url];
+                    delete promiseCache[collectionName];
 
-                    timers[url] = setTimeout(function () {
+                    timers[collectionName] = setTimeout(function () {
                         // refresh themes occasionally
-                        _getThemes(url, true);
+                        getThemes(collectionName, true);
                     }, REFRESH_INTERVAL);
                 });
 
-                promise.done(function (data) {
+                promise.done(function (themes) {
                     // promise fulfilled. Cache the updated themes.
-                    themesCache[url] = data;
+                    themesCache[collectionName] = themes;
 
                     // save the theme in the prefs for offline use
-                    _storeCachedThemesToPrefs(url, data);
+                    _storeCachedThemesToPrefs(collectionName, themes);
+                    
+                    // notify listeners that the cached themes were updated
+                    $(exports).triggerHandler("themesUpdated", [collectionName, themes]);
                 });
 
                 return promise;
             }
         }
 
-        var cachedThemes = themesCache[url],
+        var cachedThemes = themesCache[collectionName],
             refreshPromise;
 
         if (refresh || !cachedThemes) {
@@ -245,30 +274,6 @@ define(function (require, exports, module) {
             return refreshPromise;
         }
     }
-
-    function getMyThemes(refresh) {
-        var url = _constructMyThemesRequestURL();
-        return _getThemes(url, refresh);
-    }
-
-    function getFavoriteThemes(refresh) {
-        var url = _constructMyFavoritesRequestURL();
-
-        return _getThemes(url, refresh);
-    }
-
-    function getRandomThemes(refresh) {
-        var url = _constructRandomThemesRequestURL();
-
-        return _getThemes(url, refresh);
-    }
-
-    function getPopularThemes(refresh) {
-        var url = _constructPopularThemesRequestURL();
-
-        return _getThemes(url, refresh);
-    }
-
 
     /**
      * Get URL info about Kuler theme in the form of a jQuery promise that resolves to a
@@ -397,21 +402,23 @@ define(function (require, exports, module) {
     }
 
     // Public API
-    exports.getMyThemes                 = getMyThemes;
-    exports.getFavoriteThemes           = getFavoriteThemes;
-    exports.getRandomThemes             = getRandomThemes;
-    exports.getPopularThemes            = getPopularThemes;
+    exports.getThemes                   = getThemes;
     exports.getThemeURLInfo             = getThemeURLInfo;
     exports.loadCachedThemesFromPrefs   = loadCachedThemesFromPrefs;
     exports.getLastDisplayedCollection  = getLastDisplayedCollection;
     exports.setLastDisplayedCollection  = setLastDisplayedCollection;
     exports.flushCachedThemes           = flushCachedThemes;
+    
+    exports.COLLECTION_MY_THEMES    = COLLECTION_MY_THEMES;
+    exports.COLLECTION_FAVORITES    = COLLECTION_FAVORITES;
+    exports.COLLECTION_POPULAR      = COLLECTION_POPULAR;
+    exports.COLLECTION_RANDOM       = COLLECTION_RANDOM;
+    exports.orderedCollectionNames  = [COLLECTION_MY_THEMES,
+                                       COLLECTION_FAVORITES,
+                                       COLLECTION_POPULAR,
+                                       COLLECTION_RANDOM];
 
-    // for testing purpose
-    exports._constructKulerURL                  = _constructKulerURL;
-    exports._constructMyThemesRequestURL        = _constructMyThemesRequestURL;
-    exports._constructRandomThemesRequestURL    = _constructRandomThemesRequestURL;
-    exports._constructPopularThemesRequestURL   = _constructPopularThemesRequestURL;
-    exports._constructMyFavoritesRequestURL     = _constructMyFavoritesRequestURL;
-    exports._executeAjaxRequest                 = _executeAjaxRequest;
+    // for testing purposes
+    exports.COLLECTION_URLS     = COLLECTION_URLS;
+    exports._executeAjaxRequest = _executeAjaxRequest;
 });

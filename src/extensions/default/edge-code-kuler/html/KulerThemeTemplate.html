@@ -2,9 +2,9 @@
     <div class="kuler-swatch-bg">
         <div class="kuler-swatch">
             {{#swatches}}
-                <div class="kuler-swatch-block kuler-block" data-hex="{{hex}}" data-rgb="{{rgb}}" data-hsl="{{hsl}}" style="background-color: {{hex}};" title="{{rgb}}; {{hsl}}; {{hex}}" tabindex="0"></div>
+                <div id="{{id}}" class="kuler-swatch-block" data-hex="{{hex}}" data-rgb="{{rgb}}" data-hsl="{{hsl}}" style="background-color: {{hex}};" title="{{rgb}}; {{hsl}}; {{hex}}" tabindex="0"></div>
             {{/swatches}}
         </div>
     </div>
-    <span class="kuler-swatch-title" title="{{name}}">{{name}}</span>
+    <a id="{{titleId}}"><span class="kuler-swatch-title" title="{{name}}">{{name}}</span></a>
 </div>
