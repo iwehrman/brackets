@@ -31,5 +31,7 @@ define({
 	"ABOUT_TEXT_LINE1": "{BUILD_TYPE} {VERSION} (Preview)",
 	"ABOUT_TEXT_LINE4": "Développé à partir de Brackets - <a class=\"clickable-link\" data-href=\"https://github.com/adobe/brackets/\">https://github.com/adobe/brackets/</a>",
 	"ABOUT_TEXT_LINE5": "Un grand merci à ceux qui ont contribué à Brackets :",
-	"ABOUT_TEXT_LINE_EDGECODE_TEAM": "<b>Equipe Edge Code:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thiess, Ian Wehrman."
+	"ABOUT_TEXT_LINE_EDGECODE_TEAM": "<b>Equipe Edge Code:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thiess, Ian Wehrman.",
+    "DEFAULT_EDITOR_TITLE": "Default Editor",
+    "DEFAULT_EDITOR_MESSAGE": "Make {APP_NAME} your default editor for <span class='dialog-filename'>JS</span> and <span class='dialog-filename'>CSS</span> files?<br /><br />We promise we'll only ask this once."
 });
