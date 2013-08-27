@@ -117,7 +117,7 @@ define({
 	"WITH": "Avec",
 	"BUTTON_YES": "Oui",
 	"BUTTON_NO": "Non",
-	"BUTTON_ALL": "Tout",
+	"BUTTON_REPLACE_ALL": "Tout\u2026",
 	"BUTTON_STOP": "Arrêter",
 	"BUTTON_REPLACE": "Remplacer",
 
