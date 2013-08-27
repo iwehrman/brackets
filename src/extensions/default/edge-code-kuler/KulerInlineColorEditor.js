@@ -443,7 +443,7 @@ define(function (require, exports, module) {
             // refresh the open collection of themes when the themes are updated
             $(kulerAPI).on("themesUpdated", function (event, collectionName, themes) {
                 if (collectionName === self.activeCollection &&
-                        collectionName !== kulerAPI.COLLECTION_RANDOM_THEMES) {
+                        collectionName !== kulerAPI.COLLECTION_RANDOM) {
                     
                     var $focusedElement = self.$kuler.find(":focus"),
                         scrollY         = self.$scroller.scrollTop();
