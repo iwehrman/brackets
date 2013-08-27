@@ -33,5 +33,5 @@ define({
 	"ABOUT_TEXT_LINE5": "Un grand merci à ceux qui ont contribué à Brackets :",
 	"ABOUT_TEXT_LINE_EDGECODE_TEAM": "<b>Equipe Edge Code:</b> Bryan Chin, Jochen Hagenstr&ouml;m, Larz, Jay London, Ingo Richter, Ryan Stewart, Juliana Suh, Peter Thiess, Ian Wehrman.",
 	"DEFAULT_EDITOR_TITLE": "Editeur par défaut",
-	"DEFAULT_EDITOR_MESSAGE": "[7126957] !é=Make {APP_NAME} your default editor for <span class='dialog-filename'>JS</span> and <span class='dialog-filename'>CSS</span> files?<br /><br />We promise we'll only ask this once.=!"
+	"DEFAULT_EDITOR_MESSAGE": "Voulez-vous choisir {APP_NAME} en tant qu’éditeur par défaut pour les fichiers <span class='dialog-filename'>JS</span> et <span class='dialog-filename'>CSS</span> ?<br /><br />C’est la dernière fois que nous vous posons cette question."
 });
