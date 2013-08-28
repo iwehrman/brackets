@@ -40,10 +40,12 @@ define(function (require, exports, module) {
     var ANIMATION_DURATION          = 75,
         THANKS_DURATION             = 2000,
         POPOVER_OFFSET_MAGIC_NUMBER = 190,
+        FEEDBACK_MAX_LENGTH         = 7500,
         SHOW_POPOVER_CLASS          = "edge-code-informer-show",
         DISABLE_TOOLBAR_CLASS       = "edge-code-informer-disabled";
 
-    var popoverHTML     = Mustache.render(popoverTemplate, Strings),
+    var popoverSettings = Object.create(Strings, { MAX_LENGTH: { value: FEEDBACK_MAX_LENGTH} }),
+        popoverHTML     = Mustache.render(popoverTemplate, popoverSettings),
         $toolbarIcon    = $(toolbarHTML),
         $popover        = $(popoverHTML),
         $textarea       = $popover.find("textarea"),
@@ -130,7 +132,8 @@ define(function (require, exports, module) {
      * showing a thank-you message, and then dismissing the popup.
      */
     function handleSubmit(event) {
-        var feedbackText = $textarea.val();
+        var rawFeedbackText = $textarea.val(),
+            feedbackText = rawFeedbackText.substring(0, FEEDBACK_MAX_LENGTH);
         
         informer.postFeedback(feedbackText);
         showThanks();
