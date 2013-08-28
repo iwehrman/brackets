@@ -31,6 +31,7 @@ define(function (require, exports, module) {
     var INFORMER_MAX_RETRIES        = 5,
         INFORMER_INITIAL_DELAY      = 1000,      // one second
         INFORMER_HTTP_TIMEOUT       = 1000 * 10, // ten seconds
+        INFORMER_MAX_CHARS          = 7500,
         INFORMER_BASE_URL           = "http://feedback.informer.io",
         INFORMER_STATUS_URL         = INFORMER_BASE_URL + "/status/",
         INFORMER_FEEDBACK_URL       = INFORMER_BASE_URL + "/feedback/",
@@ -41,13 +42,14 @@ define(function (require, exports, module) {
         };
     
     /**
-     * Post the given feedback text to the Informer service.
+     * Post the given feedback text, possibly truncated, to the Informer service.
      *
-     * @param {string} feedbackText - the feedback text to be posted
+     * @param {string} rawFeedbackText - the feedback text to be posted, which may be truncated
      * @return {jQuery.Promise} - Resolves if the post was successful; rejects otherwise.
      */
-    function postFeedback(feedbackText) {
-        var retryDelay = INFORMER_INITIAL_DELAY,
+    function postFeedback(rawFeedbackText) {
+        var feedbackText = rawFeedbackText.substring(0, INFORMER_MAX_CHARS),
+            retryDelay = INFORMER_INITIAL_DELAY,
             deferred = $.Deferred(),
             date = new Date().toGMTString(),
             feedbackData = {
