@@ -126,7 +126,7 @@ define(function (require, exports, module) {
         }
         
         if (window.navigator.onLine) {
-            statusHelper(0, retryDelay);
+            statusHelper(0);
         } else {
             deferred.reject();
         }
