@@ -42,6 +42,21 @@
             border-bottom-left-radius: 3px;        
             border-bottom-right-radius: 3px;
         }
+
+        &:focus,
+        &:hover {
+            a {
+                background: @menu-highlight-color;
+            }
+        }
+        
+        &:focus {
+            outline: none;
+            a {
+                border: none;
+                box-shadow: inset 0 0 0 2px @focus-highlight-color;
+            }
+        }
     }
     
     .kuler-dropdown-link {
@@ -51,11 +66,6 @@
         background: white;
         color: @emphasized-text-color;
         text-decoration: none;
-        
-        &:hover {
-            background: @menu-highlight-color;
-            color: @emphasized-text-color;
-        }        
     }
 }
 
@@ -89,11 +99,19 @@
         padding: 5px;
         left: -6px;  
         top: -5px;
-        &:hover {
+        
+        &:hover,
+        &:focus {
             padding: 4px;
             border: 1px solid #9c9e9e;
             border-radius: 3px;
             box-shadow: inset 0 1px 0 white;
+        }
+        
+        &:focus {
+            outline: none;
+            border: 1px solid @focus-highlight-color;
+            box-shadow: 0 0 0 2px @focus-highlight-color;
         }
     }
     
@@ -131,7 +149,6 @@
             text-decoration: none;   
         }
     }
-
     
     .kuler-themes {
         display: none;
