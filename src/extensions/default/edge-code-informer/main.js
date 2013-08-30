@@ -39,7 +39,7 @@ define(function (require, exports, module) {
     
     var ANIMATION_DURATION          = 75,
         THANKS_DURATION             = 2000,
-        POPOVER_OFFSET_MAGIC_NUMBER = 190,
+        POPOVER_OFFSET_MAGIC_NUMBER = 193,
         FEEDBACK_MAX_LENGTH         = 7500,
         SHOW_POPOVER_CLASS          = "edge-code-informer-show",
         DISABLE_TOOLBAR_CLASS       = "edge-code-informer-disabled";
