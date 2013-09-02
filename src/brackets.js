@@ -96,7 +96,8 @@ define(function (require, exports, module) {
         NodeConnection          = require("utils/NodeConnection"),
         ExtensionUtils          = require("utils/ExtensionUtils"),
         DragAndDrop             = require("utils/DragAndDrop"),
-        ColorUtils              = require("utils/ColorUtils");
+        ColorUtils              = require("utils/ColorUtils"),
+        DefaultEditor           = require("utils/DefaultEditor");
             
     // Load modules that self-register and just need to get included in the main project
     require("command/DefaultMenus");
