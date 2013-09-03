@@ -29,7 +29,6 @@ define(function (require, exports, module) {
     "use strict";
     
     var AppInit                 = require("utils/AppInit"),
-        Global                  = require("utils/Global"),
         Dialogs                 = require("widgets/Dialogs"),
         DefaultDialogs          = require("widgets/DefaultDialogs"),
         Strings                 = require("strings"),
@@ -46,29 +45,6 @@ define(function (require, exports, module) {
      * @type {PreferenceStorage}
      */
     var _defaultPrefs = { DefaultEditorPrompted: false };
-    
-    //BSCTODO:
-    // x1. only for Windows
-    // 2. restore if set before?
-	
-    //var fileExt = ".abc";
-    //brackets.app.checkRegistrationAsDefaultEditor(
-    //    fileExt,
-    //    function (err, isDefault) {
-    //        var x = 1;
-    //        var y = 2;
-    //        var z = x + y;
-    //        ++z;
-    //    } /* Ignore errors */
-    //);
-    //brackets.app.setRegistrationAsDefaultEditor(
-    //    fileExt,
-    //    function (err) {} /* Ignore errors */
-    //);
-    //brackets.app.clearRegistrationAsDefaultEditor(
-    //    fileExt,
-    //    function (err) {} /* Ignore errors */
-    //);
     
     /**
      * Conditionally prompts the user to register the app as the default editor for JS and CSS files
@@ -98,8 +74,8 @@ define(function (require, exports, module) {
                 .done(function (id) {
                     if (id === Dialogs.DIALOG_BTN_YES) {
                         // register as default editor for given file types
-                        brackets.app.setRegistrationAsDefaultEditor(".js", function (err) {} /* Ignore errors */);
-                        brackets.app.setRegistrationAsDefaultEditor(".css", function (err) {} /* Ignore errors */);
+                        brackets.app.setRegistrationAsDefaultEditor(".js");
+                        brackets.app.setRegistrationAsDefaultEditor(".css");
                     }
                     
                     // make note in prefs that we've already asked once
