@@ -52,13 +52,89 @@ define(function (require, exports, module) {
     var _defaultPrefs = { DefaultEditorPrompted: false };   // default to first-launch state
     
     /**
+     * Check if the app is the default editor for the given file type.
+     *
+     * @param {string} file extension (eg. ".ext") to check
+     *
+     * @return {$.Promise} a jQuery promise that returns whether the app is the default editor
+     */
+    function checkIfDefaultEditorFor(fileExt) {
+        var result = new $.Deferred();
+        if (brackets.platform === "win") {
+            brackets.app.checkIfDefaultEditorFor(
+                fileExt,
+                function(err, isDefault) {
+                    if (err !== brackets.app.NO_ERROR)
+                        result.reject(err);
+                    else
+                        result.resolve(isDefault);
+                }
+            );
+        } else {
+            result.resolve(false);
+        }
+        return result.promise();
+    }
+    
+    /**
+     * Registers the app to be the default editor for the given file type.
+     *
+     * @param {string} file extension (eg. ".ext") to register
+     *
+     * @return {$.Promise} a jQuery promise that returns an error if unable to register
+     */
+    function registerAsDefaultEditorFor(fileExt) {
+        var result = new $.Deferred();
+        if (brackets.platform === "win") {
+            brackets.app.registerAsDefaultEditorFor(
+                fileExt,
+                function(err) {
+                    if (err !== brackets.app.NO_ERROR)
+                        result.reject(err);
+                    else
+                        result.resolve();
+                }
+            );
+        } else {
+            result.resolve();
+        }
+        return result.promise();
+    }
+    
+    /**
+     * Unregister the app as the default editor for the given file type.
+     *
+     * @param {string} file extension (eg. ".ext") to unregister
+     *
+     * @return {$.Promise} a jQuery promise that returns an error if unable to unregister
+     */
+    function unregisterAsDefaultEditorFor(fileExt) {
+        var result = new $.Deferred();
+        if (brackets.platform === "win") {
+            brackets.app.unregisterAsDefaultEditorFor(
+                fileExt,
+                function(err) {
+                    if (err !== brackets.app.NO_ERROR)
+                        result.reject(err);
+                    else
+                        result.resolve();
+                }
+            );
+        } else {
+            result.resolve();
+        }
+        return result.promise();
+    }
+    
+    /**
      * Conditionally prompts the user to register the app as the default editor for JS and CSS files
      *
      * @return None.
      */
     function promptForDefaultEditor() {
         // only prompt on Windows and if we haven't prompted before (ie. first launch)
-        if ((brackets.platform === "win") && (!_prefs.getValue(PREFS_DEFAULT_EDITOR_PROMPTED))) {
+        if ((brackets.platform === "win")   // Windows-only feature
+            && (!_prefs.getValue(PREFS_DEFAULT_EDITOR_PROMPTED))) {
             Dialogs.showModalDialog(
                 DefaultDialogs.DIALOG_ID_DEFAULT_EDITOR,
                 Strings.DEFAULT_EDITOR_TITLE,
@@ -75,21 +151,20 @@ define(function (require, exports, module) {
                         text      : Strings.BUTTON_YES
                     }
                 ]
-            )
-                .done(function (id) {
-                    if (id === Dialogs.DIALOG_BTN_YES) {
-                        // register as default editor for specific file types
-                        brackets.app.setRegistrationAsDefaultEditor(FILEEXT_JS);
-                        brackets.app.setRegistrationAsDefaultEditor(FILEEXT_CSS);
-                    } else if (id === Dialogs.DIALOG_BTN_NO) {
-                        // clear any previous registration as the default editor for these file types
-                        brackets.app.clearRegistrationAsDefaultEditor(FILEEXT_JS);
-                        brackets.app.clearRegistrationAsDefaultEditor(FILEEXT_CSS);
-                    }
-                    
-                    // make note in prefs that we've already asked once
-                    _prefs.setValue(PREFS_DEFAULT_EDITOR_PROMPTED, true);
-                });
+            ).done(function (id) {
+                if (id === Dialogs.DIALOG_BTN_YES) {
+                    // register app as default editor for specific file types
+                    registerAsDefaultEditorFor(FILEEXT_JS);
+                    registerAsDefaultEditorFor(FILEEXT_CSS);
+                } else if (id === Dialogs.DIALOG_BTN_NO) {
+                    // unregister app as the default editor for these file types
+                    unregisterAsDefaultEditorFor(FILEEXT_JS);
+                    unregisterAsDefaultEditorFor(FILEEXT_CSS);
+                }
+                
+                // make note in prefs that we've already asked once
+                _prefs.setValue(PREFS_DEFAULT_EDITOR_PROMPTED, true);
+            });
         }
     }
 
@@ -102,5 +177,7 @@ define(function (require, exports, module) {
     });
 
     // Export public API
-    exports.promptForDefaultEditor  = promptForDefaultEditor;
+    exports.checkIfDefaultEditorFor         = checkIfDefaultEditorFor;
+    exports.registerAsDefaultEditorFor      = registerAsDefaultEditorFor;
+    exports.unregisterAsDefaultEditorFor    = unregisterAsDefaultEditorFor;
 });
