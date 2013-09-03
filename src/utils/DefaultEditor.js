@@ -34,6 +34,11 @@ define(function (require, exports, module) {
         Strings                 = require("strings"),
         PreferencesManager      = require("preferences/PreferencesManager");
     
+    // string constants
+    var PREFS_DEFAULT_EDITOR_PROMPTED = "DefaultEditorPrompted",
+        FILEEXT_JS = ".js",
+        FILEEXT_CSS = ".css";
+    
     /**
      * @private
      * @type {PreferenceStorage}
@@ -44,7 +49,7 @@ define(function (require, exports, module) {
      * @private
      * @type {PreferenceStorage}
      */
-    var _defaultPrefs = { DefaultEditorPrompted: false };
+    var _defaultPrefs = { DefaultEditorPrompted: false };   // default to first-launch state
     
     /**
      * Conditionally prompts the user to register the app as the default editor for JS and CSS files
@@ -53,7 +58,7 @@ define(function (require, exports, module) {
      */
     function promptForDefaultEditor() {
         // only prompt on Windows and if we haven't prompted before (ie. first launch)
-        if ((brackets.platform === "win") && (!_prefs.getValue("DefaultEditorPrompted"))) {
+        if ((brackets.platform === "win") && (!_prefs.getValue(PREFS_DEFAULT_EDITOR_PROMPTED))) {
             Dialogs.showModalDialog(
                 DefaultDialogs.DIALOG_ID_DEFAULT_EDITOR,
                 Strings.DEFAULT_EDITOR_TITLE,
@@ -73,13 +78,17 @@ define(function (require, exports, module) {
             )
                 .done(function (id) {
                     if (id === Dialogs.DIALOG_BTN_YES) {
-                        // register as default editor for given file types
-                        brackets.app.setRegistrationAsDefaultEditor(".js");
-                        brackets.app.setRegistrationAsDefaultEditor(".css");
+                        // register as default editor for specific file types
+                        brackets.app.setRegistrationAsDefaultEditor(FILEEXT_JS);
+                        brackets.app.setRegistrationAsDefaultEditor(FILEEXT_CSS);
+                    } else if (id === Dialogs.DIALOG_BTN_NO) {
+                        // clear any previous registration as the default editor for these file types
+                        brackets.app.clearRegistrationAsDefaultEditor(FILEEXT_JS);
+                        brackets.app.clearRegistrationAsDefaultEditor(FILEEXT_CSS);
                     }
                     
                     // make note in prefs that we've already asked once
-                    _prefs.setValue("DefaultEditorPrompted", true);
+                    _prefs.setValue(PREFS_DEFAULT_EDITOR_PROMPTED, true);
                 });
         }
     }
