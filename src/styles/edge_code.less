@@ -33,11 +33,21 @@
 
 /* Project Panel styles */
 
+@project-tree-highlight-color: hsl(170, 100%, 70%);
+
 #open-files-container {        
     li {        
         &.selected .extension,
         &.selected a {
-            color: hsl(170, 100%, 70%) !important;
+            color: @project-tree-highlight-color !important;
+        }
+    }
+}
+
+.jstree-brackets li {
+    a {
+        &.jstree-clicked, &.jstree-clicked .extension {
+            color: @project-tree-highlight-color;
         }
     }
 }
