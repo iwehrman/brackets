@@ -32,7 +32,7 @@
 
 .edge-code-informer-popover {
     width: 360px;
-    height: 205px;
+    height: 208px;
     margin: 0;
     padding: 0 0 8px 0;
     background-color: #dfe2e2;
@@ -93,23 +93,24 @@
 }
 
 .edge-code-informer-footer {
-    height: 30px;
     padding-left: 16px;
 }
 
 .edge-code-informer-footer-left {
     float: left;
-    width: 240px;
-    padding-top: 2px;
+    width: 238px;
+    height: 45px;
+    display: table;
 }
 
 .edge-code-informer-footer-right {
-    padding: 8px 15px 0 15px;
+    padding: 10px 15px 0 15px;
     float: right;
 }
 
 .edge-code-informer-legal {
-    padding-top: 5px;
+    display: table-cell;
+    vertical-align: middle;
     color: #666;
     font-size: 11px;
     line-height: 14px;
