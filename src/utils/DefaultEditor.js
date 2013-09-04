@@ -64,10 +64,11 @@ define(function (require, exports, module) {
             brackets.app.checkIfDefaultEditorFor(
                 fileExt,
                 function(err, isDefault) {
-                    if (err !== brackets.app.NO_ERROR)
+                    if (err !== brackets.app.NO_ERROR) {
                         result.reject(err);
-                    else
+                    } else {
                         result.resolve(isDefault);
+                    }
                 }
             );
         } else {
@@ -89,10 +90,11 @@ define(function (require, exports, module) {
             brackets.app.registerAsDefaultEditorFor(
                 fileExt,
                 function(err) {
-                    if (err !== brackets.app.NO_ERROR)
+                    if (err !== brackets.app.NO_ERROR) {
                         result.reject(err);
-                    else
+                    } else {
                         result.resolve();
+                    }
                 }
             );
         } else {
@@ -114,10 +116,11 @@ define(function (require, exports, module) {
             brackets.app.unregisterAsDefaultEditorFor(
                 fileExt,
                 function(err) {
-                    if (err !== brackets.app.NO_ERROR)
+                    if (err !== brackets.app.NO_ERROR) {
                         result.reject(err);
-                    else
+                    } else {
                         result.resolve();
+                    }
                 }
             );
         } else {
