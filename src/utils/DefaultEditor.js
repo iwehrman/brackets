@@ -56,7 +56,8 @@ define(function (require, exports, module) {
      *
      * @param {string} file extension (eg. ".ext") to check
      *
-     * @return {$.Promise} a jQuery promise that returns whether the app is the default editor
+     * @return {$.Promise} a jQuery promise that resolves with a boolean indicating
+     *                     whether the app is currently the default editor
      */
     function checkIfDefaultEditorFor(fileExt) {
         var result = new $.Deferred();
@@ -82,7 +83,7 @@ define(function (require, exports, module) {
      *
      * @param {string} file extension (eg. ".ext") to register
      *
-     * @return {$.Promise} a jQuery promise that returns an error if unable to register
+     * @return {$.Promise} a jQuery promise that rejects with an error if unable to register
      */
     function registerAsDefaultEditorFor(fileExt) {
         var result = new $.Deferred();
@@ -108,7 +109,7 @@ define(function (require, exports, module) {
      *
      * @param {string} file extension (eg. ".ext") to unregister
      *
-     * @return {$.Promise} a jQuery promise that returns an error if unable to unregister
+     * @return {$.Promise} a jQuery promise that rejects with an error if unable to unregister
      */
     function unregisterAsDefaultEditorFor(fileExt) {
         var result = new $.Deferred();
@@ -131,8 +132,6 @@ define(function (require, exports, module) {
     
     /**
      * Conditionally prompts the user to register the app as the default editor for JS and CSS files
-     *
-     * @return None.
      */
     function promptForDefaultEditor() {
         // only prompt on Windows and if we haven't prompted before (ie. first launch)
