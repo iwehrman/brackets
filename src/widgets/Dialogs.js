@@ -47,7 +47,9 @@ define(function (require, exports, module) {
         DIALOG_BTN_OK               = "ok",
         DIALOG_BTN_DONTSAVE         = "dontsave",
         DIALOG_CANCELED             = "_canceled",
-        DIALOG_BTN_DOWNLOAD         = "download";
+        DIALOG_BTN_DOWNLOAD         = "download",
+        DIALOG_BTN_YES              = "yes",
+        DIALOG_BTN_NO               = "no";
     
     /**
      * Dialog Buttons Class Names
@@ -343,6 +345,9 @@ define(function (require, exports, module) {
     exports.DIALOG_BTN_DONTSAVE          = DIALOG_BTN_DONTSAVE;
     exports.DIALOG_CANCELED              = DIALOG_CANCELED;
     exports.DIALOG_BTN_DOWNLOAD          = DIALOG_BTN_DOWNLOAD;
+    exports.DIALOG_BTN_YES               = DIALOG_BTN_YES;
+    exports.DIALOG_BTN_NO                = DIALOG_BTN_NO;
+    
     
     exports.DIALOG_BTN_CLASS_PRIMARY     = DIALOG_BTN_CLASS_PRIMARY;
     exports.DIALOG_BTN_CLASS_NORMAL      = DIALOG_BTN_CLASS_NORMAL;
