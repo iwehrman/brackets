@@ -38,6 +38,7 @@ define(function (require, exports, module) {
         AUTH_HEADER = "Bearer {{accesstoken}}",
         PREFS_URLS_KEY = "KULER_URLS",
         PREFS_LAST_DISPLAYED_COLLECTION_KEY = "LAST_DISPLAYED_COLLECTION",
+        KULER_AJAX_TIMEOUT = 1000 * 5, // 5 seconds
         REFRESH_INTERVAL = 1000 * 60 * 15; // 15 minutes
     
     // TODO due to https://github.com/adobe/brackets/issues/4758 the number of
@@ -190,8 +191,14 @@ define(function (require, exports, module) {
             "x-api-key" : EC_KULER_API_KEY,
             "Authorization" : Mustache.render(AUTH_HEADER, {accesstoken : accessToken})
         };
+        
+        var settings = {
+            url: kulerUrl,
+            headers: headers,
+            timeout: KULER_AJAX_TIMEOUT
+        };
 
-        return exports._executeAjaxRequest({url: kulerUrl, headers : headers});
+        return exports._executeAjaxRequest(settings);
     }
 
     function _getThemesFromKuler(collectionName) {

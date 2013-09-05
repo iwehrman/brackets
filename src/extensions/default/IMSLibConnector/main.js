@@ -36,7 +36,8 @@ define(function (require, exports, module) {
 
     // max retries when the error shell error is CALL_PENDING
     var MAX_RETRIES = 10,
-        MS_WAIT_UNTIL_RETRY = 100;
+        MS_WAIT_UNTIL_RETRY = 100,
+        MS_TIMEOUT = 2000;
 
     // cached authorization status from the shell
     var authStatusCache = null,
@@ -79,10 +80,15 @@ define(function (require, exports, module) {
      * @returns {$.Promise<{accessToken: string, authorizedUser: Object}>} - an auth status object
      */
     function _getAuthStatus(forceRefresh) {
-        var deferred;
+        var deferred,
+            deferredTimer;
         
         // wrap the callback in a function so it can be called recursively
         function getAuthStatusHelper(retryCount) {
+            if (deferred.state() !== "pending") {
+                return;
+            }
+            
             if (retryCount === undefined) {
                 retryCount = 0;
             }
@@ -91,6 +97,10 @@ define(function (require, exports, module) {
                 deferred.reject();
             } else {
                 brackets.app.getAuthorizedUser(function (err, status) {
+                    if (deferred.state() !== "pending") {
+                        return;
+                    }
+                    
                     if (err === IMS_NO_ERROR) {
                         try {
                             var statusObj = JSON.parse(status),
@@ -110,6 +120,7 @@ define(function (require, exports, module) {
                                 _getAuthStatus();
                             }, expiresIn);
                             
+                            window.clearTimeout(deferredTimer);
                             deferred.resolve(authStatusCache);
                         } catch (parseError) {
                             console.error("Unable to parse auth status: ", parseError);
@@ -132,6 +143,11 @@ define(function (require, exports, module) {
             deferred = authStatusDeferred;
         } else {
             deferred = $.Deferred();
+            
+            // if the deferred isn't resolved in time, reject it
+            deferredTimer = window.setTimeout(function () {
+                deferred.reject("IMSLib timeout");
+            }, MS_TIMEOUT);
             
             // if there is no cached status, we'll request it from the shell and
             // cache the promise so that there is at most one active callback
