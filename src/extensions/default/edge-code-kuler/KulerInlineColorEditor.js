@@ -513,8 +513,8 @@ define(function (require, exports, module) {
 
             var LEFT_MARGIN = 15;
             
-            var displayThemes = this._displayThemes.bind(this),
-                activeCollection = this.activeCollection,
+            var self = this,
+                displayThemes = this._displayThemes.bind(this),
                 $kuler = this.$kuler,
                 $scroller = this.$scroller,
                 $colorEditor = this.colorEditor.$element,
@@ -527,7 +527,7 @@ define(function (require, exports, module) {
             
             // refresh the open collection of themes when the themes are updated
             $(kulerAPI).on("themesUpdated", function (event, collectionName, themes) {
-                if (collectionName === activeCollection &&
+                if (collectionName === self.activeCollection &&
                         collectionName !== kulerAPI.COLLECTION_RANDOM) {
                     
                     var $focusedElement = $kuler.find(":focus"),
