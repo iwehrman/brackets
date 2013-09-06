@@ -154,6 +154,7 @@ define(function (require, exports, module) {
             ExtensionUtils          : ExtensionUtils,
             UpdateNotification      : require("utils/UpdateNotification"),
             InstallExtensionDialog  : require("extensibility/InstallExtensionDialog"),
+            DefaultEditor           : require("utils/DefaultEditor"),
             doneLoading             : false
         };
 
