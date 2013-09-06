@@ -52,6 +52,19 @@ define(function (require, exports, module) {
     var _defaultPrefs = { DefaultEditorPrompted: false };   // default to first-launch state
     
     /**
+     * Check whether we've already prompted the user to register as the default editor.
+     *   Since this is a Windows-only feature, all other platforms will always return true
+     *   (to avoid prompting).
+     *
+     * @return {boolean} on Windows, return true if we've already prompted the user.
+     *   for all other platforms, always return true
+     */
+    function hasPrompted() {
+        return (brackets.platform !== "win")   // Windows-only feature
+            || (_prefs.getValue(PREFS_DEFAULT_EDITOR_PROMPTED));
+    }
+    
+    /**
      * Check if the app is the default editor for the given file type.
      *
      * @param {string} file extension (eg. ".ext") to check
@@ -135,8 +148,7 @@ define(function (require, exports, module) {
      */
     function promptForDefaultEditor() {
         // only prompt on Windows and if we haven't prompted before (ie. first launch)
-        if ((brackets.platform === "win")   // Windows-only feature
-            && (!_prefs.getValue(PREFS_DEFAULT_EDITOR_PROMPTED))) {
+        if (!hasPrompted()) {
             Dialogs.showModalDialog(
                 DefaultDialogs.DIALOG_ID_DEFAULT_EDITOR,
                 Strings.DEFAULT_EDITOR_TITLE,
@@ -173,13 +185,9 @@ define(function (require, exports, module) {
     // Initialize the PreferenceStorage
     _prefs = PreferencesManager.getPreferenceStorage(module, _defaultPrefs);
 
-    // called after all modules and extensions have been loaded
-    AppInit.appReady(function () {
-        promptForDefaultEditor();
-    });
-
     // Export public API
     exports.checkIfDefaultEditorFor         = checkIfDefaultEditorFor;
     exports.registerAsDefaultEditorFor      = registerAsDefaultEditorFor;
     exports.unregisterAsDefaultEditorFor    = unregisterAsDefaultEditorFor;
+    exports.promptForDefaultEditor          = promptForDefaultEditor;
 });

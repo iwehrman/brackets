@@ -154,6 +154,7 @@ define(function (require, exports, module) {
             ExtensionUtils          : ExtensionUtils,
             UpdateNotification      : require("utils/UpdateNotification"),
             InstallExtensionDialog  : require("extensibility/InstallExtensionDialog"),
+            DefaultEditor           : require("utils/DefaultEditor"),
             doneLoading             : false
         };
 
@@ -254,6 +255,11 @@ define(function (require, exports, module) {
             // as the check will skip if the last check was not -24h ago
             window.setInterval(UpdateNotification.checkForUpdate, 86520000);
             UpdateNotification.checkForUpdate();
+        }
+        
+        // Check whether we should prompt the user to register the app as the Default Editor
+        if (!params.get("skipDefaultEditorCheck") && !brackets.inBrowser) {
+            DefaultEditor.promptForDefaultEditor();
         }
     }
     
