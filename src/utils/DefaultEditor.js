@@ -185,13 +185,9 @@ define(function (require, exports, module) {
     // Initialize the PreferenceStorage
     _prefs = PreferencesManager.getPreferenceStorage(module, _defaultPrefs);
 
-    // called after all modules and extensions have been loaded
-    AppInit.appReady(function () {
-        promptForDefaultEditor();
-    });
-
     // Export public API
     exports.checkIfDefaultEditorFor         = checkIfDefaultEditorFor;
     exports.registerAsDefaultEditorFor      = registerAsDefaultEditorFor;
     exports.unregisterAsDefaultEditorFor    = unregisterAsDefaultEditorFor;
+    exports.promptForDefaultEditor          = promptForDefaultEditor;
 });

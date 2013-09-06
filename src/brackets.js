@@ -256,6 +256,11 @@ define(function (require, exports, module) {
             window.setInterval(UpdateNotification.checkForUpdate, 86520000);
             UpdateNotification.checkForUpdate();
         }
+        
+        // Check whether we should prompt the user to register the app as the Default Editor
+        if (!params.get("skipDefaultEditorCheck") && !brackets.inBrowser) {
+            DefaultEditor.promptForDefaultEditor();
+        }
     }
     
     /**

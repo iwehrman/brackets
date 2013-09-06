@@ -355,6 +355,9 @@ define(function (require, exports, module) {
             // disable initial dialog for live development
             params.put("skipLiveDevelopmentInfo", true);
             
+            // disable default editor check in test windows
+            params.put("skipDefaultEditorCheck", true);
+            
             _testWindow = window.open(getBracketsSourceRoot() + "/index.html?" + params.toString(), "_blank", optionsStr);
             
             _testWindow.isBracketsTestWindow = true;
