@@ -120,7 +120,6 @@ define(function (require, exports, module) {
                                 _getAuthStatus();
                             }, expiresIn);
                             
-                            window.clearTimeout(deferredTimer);
                             deferred.resolve(authStatusCache);
                         } catch (parseError) {
                             console.error("Unable to parse auth status: ", parseError);
@@ -148,6 +147,11 @@ define(function (require, exports, module) {
             deferredTimer = window.setTimeout(function () {
                 deferred.reject("IMSLib timeout");
             }, MS_TIMEOUT);
+            
+            // clear the timer as soon as the deferred is resolved or rejected
+            deferred.always(function () {
+                window.clearTimeout(deferredTimer);
+            });
             
             // if there is no cached status, we'll request it from the shell and
             // cache the promise so that there is at most one active callback
