@@ -244,6 +244,7 @@ define(function (require, exports, module) {
         lastChar        = null,
         sessionProvider = null,
         sessionEditor   = null,
+        insertHintOnTab = null,
         hintList        = null,
         deferredHints   = null,
         keyDownEditor   = null;
@@ -375,6 +376,7 @@ define(function (require, exports, module) {
         keyDownEditor = null;
         sessionProvider = null;
         sessionEditor = null;
+        insertHintOnTab = null;
         if (deferredHints) {
             deferredHints.reject();
             deferredHints = null;
@@ -467,7 +469,6 @@ define(function (require, exports, module) {
 
         // If a provider is found, initialize the hint list and update it
         if (sessionProvider) {
-            var insertHintOnTab;
             if (sessionProvider.insertHintOnTab !== undefined) {
                 insertHintOnTab = sessionProvider.insertHintOnTab;
             } else {
@@ -528,7 +529,14 @@ define(function (require, exports, module) {
     function handleKeyEvent(editor, event) {
         keyDownEditor = editor;
         if (event.type === "keydown") {
-            if (!(event.ctrlKey || event.altKey || event.metaKey) &&
+            if (event.keyCode === KeyEvent.DOM_VK_TAB && _inSession(editor) &&
+                    !insertHintOnTab && sessionProvider.insertPartialHint) {
+                event.preventDefault();
+                sessionProvider.insertPartialHint();
+                lastChar = "\t";
+                _updateHintList();
+                
+            } else if (!(event.ctrlKey || event.altKey || event.metaKey) &&
                     (event.keyCode === KeyEvent.DOM_VK_ENTER ||
                      event.keyCode === KeyEvent.DOM_VK_RETURN ||
                      event.keyCode === KeyEvent.DOM_VK_TAB)) {

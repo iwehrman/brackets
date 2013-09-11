@@ -44,9 +44,10 @@ define(function (require, exports, module) {
      * @constructor
      */
     function CssPropHints() {
-        this.primaryTriggerKeys = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-()";
+        this.primaryTriggerKeys = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-()\t";
         this.secondaryTriggerKeys = ":";
         this.exclusion = null;
+        this.insertHintOnTab = false;
     }
 
     /**
@@ -282,12 +283,12 @@ define(function (require, exports, module) {
      * Indicates whether the manager should follow hint insertion with an
      * additional explicit hint request.
      */
-    CssPropHints.prototype.insertHint = function (hint) {
+    CssPropHints.prototype.insertHint = function (hint, isPartial) {
         var offset = this.info.offset,
             cursor = this.editor.getCursorPos(),
             start = {line: -1, ch: -1},
             end = {line: -1, ch: -1},
-            keepHints = false,
+            keepHints = !!isPartial,
             adjustCursor = false,
             newCursor,
             ctx;
@@ -305,7 +306,9 @@ define(function (require, exports, module) {
             if (this.info.name.length === 0 || CodeHintManager.hasValidExclusion(this.exclusion, textAfterCursor)) {
                 // It's a new insertion, so append a colon and set keepHints
                 // to show property value hints.
-                hint += ":";
+                if (!isPartial) {
+                    hint += ":";
+                }
                 end.ch = start.ch;
                 end.ch += offset;
                     
@@ -334,7 +337,7 @@ define(function (require, exports, module) {
                     adjustCursor = true;
                     newCursor = { line: cursor.line,
                                   ch: cursor.ch + (hint.length - this.info.name.length) };
-                } else {
+                } else if (!isPartial) {
                     hint += ":";
                 }
             }
@@ -369,6 +372,71 @@ define(function (require, exports, module) {
         }
         
         return keepHints;
+    };
+    
+    CssPropHints.prototype.insertPartialHint = function () {
+        function buildTrieFromHints(words) {
+            
+            function TrieNode(char, value) {
+                this.char = char;
+                this.value = value;
+                this.isWord = false;
+                this.children = {};
+            }
+            
+            TrieNode.prototype.addChild = function (node) {
+                var char = node.char;
+                if (this.children[char]) {
+                    return false;
+                } else {
+                    this.children[char] = node;
+                    return true;
+                }
+            };
+            
+            TrieNode.prototype.longestCommonPrefix = function () {
+                var children = this.children,
+                    keys = Object.keys(children);
+                if (keys.length === 1) {
+                    if (this.isWord) {
+                        return this.value;
+                    } else {
+                        return children[keys[0]].longestCommonPrefix();
+                    }
+                } else {
+                    return this.value;
+                }
+            };
+
+            function addWord(root, word) {
+                var currentNode = root;
+                word.split("").forEach(function (char, index) {
+                    var nextNode = currentNode.children[char];
+                    if (!nextNode) {
+                        nextNode = new TrieNode(char, currentNode.value + char);
+                        currentNode.addChild(nextNode);
+                    }
+                    currentNode = nextNode;
+                });
+                currentNode.isWord = true;
+            }
+            
+            var trie = new TrieNode(null, "");
+            words.forEach(function (word) {
+                addWord(trie, word);
+            });
+            
+            return trie;
+        }
+        
+        var hintObj = this.getHints();
+        if (hintObj.hints) {
+            var hints = hintObj.hints,
+                trie = buildTrieFromHints(hints),
+                prefix = trie.longestCommonPrefix();
+            
+            this.insertHint(prefix, true);
+        }
     };
     
     AppInit.appReady(function () {
