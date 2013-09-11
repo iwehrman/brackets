@@ -1,7 +1,7 @@
 {
     "config": {
         "app_title": "Adobe Edge Code CC (Preview)",
-        "app_name_about": "Adobe® Edge Code CC",
+        "app_name_about": "Adobe Edge Code CC",
         "about_icon": "styles/images/code_app.svg",
         "enable_jslint": false,
         "how_to_use_url": "http://www.adobe.com/devnet/edge-code/articles/code-editing-with-edge-code.html",
