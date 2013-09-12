@@ -33,6 +33,7 @@ define(function (require, exports, module) {
         HTMLUtils           = brackets.getModule("language/HTMLUtils"),
         LanguageManager     = brackets.getModule("language/LanguageManager"),
         TokenUtils          = brackets.getModule("utils/TokenUtils"),
+        Trie                = brackets.getModule("utils/Trie"),
         CSSProperties       = require("text!CSSProperties.json"),
         properties          = JSON.parse(CSSProperties);
     
@@ -375,67 +376,16 @@ define(function (require, exports, module) {
     };
     
     CssPropHints.prototype.insertPartialHint = function () {
-        function buildTrieFromHints(words) {
-            
-            function TrieNode(char, value) {
-                this.char = char;
-                this.value = value;
-                this.isWord = false;
-                this.children = {};
-            }
-            
-            TrieNode.prototype.addChild = function (node) {
-                var char = node.char;
-                if (this.children[char]) {
-                    return false;
-                } else {
-                    this.children[char] = node;
-                    return true;
-                }
-            };
-            
-            TrieNode.prototype.longestCommonPrefix = function () {
-                var children = this.children,
-                    keys = Object.keys(children);
-                if (keys.length === 1) {
-                    if (this.isWord) {
-                        return this.value;
-                    } else {
-                        return children[keys[0]].longestCommonPrefix();
-                    }
-                } else {
-                    return this.value;
-                }
-            };
-
-            function addWord(root, word) {
-                var currentNode = root;
-                word.split("").forEach(function (char, index) {
-                    var nextNode = currentNode.children[char];
-                    if (!nextNode) {
-                        nextNode = new TrieNode(char, currentNode.value + char);
-                        currentNode.addChild(nextNode);
-                    }
-                    currentNode = nextNode;
-                });
-                currentNode.isWord = true;
-            }
-            
-            var trie = new TrieNode(null, "");
-            words.forEach(function (word) {
-                addWord(trie, word);
-            });
-            
-            return trie;
-        }
+        var hintObj = this.getHints(),
+            hints = hintObj.hints;
         
-        var hintObj = this.getHints();
-        if (hintObj.hints) {
-            var hints = hintObj.hints,
-                trie = buildTrieFromHints(hints),
+        if (hints.length > 1) {
+            var trie = new Trie(hints),
                 prefix = trie.longestCommonPrefix();
             
             this.insertHint(prefix, true);
+        } else if (hints.length === 1) {
+            this.insertHint(hints[0], false);
         }
     };
     

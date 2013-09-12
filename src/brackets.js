@@ -98,7 +98,8 @@ define(function (require, exports, module) {
         DragAndDrop             = require("utils/DragAndDrop"),
         ColorUtils              = require("utils/ColorUtils"),
         CodeInspection          = require("language/CodeInspection"),
-        NativeApp               = require("utils/NativeApp");
+        NativeApp               = require("utils/NativeApp"),
+        Trie                    = require("utils/Trie");
         
     // Load modules that self-register and just need to get included in the main project
     require("command/DefaultMenus");
