@@ -27,3 +27,6 @@
 // watchPath(path)
 // unwatchPath(path)
 // unwatchAll()
+
+
+// IAN-FS: should we augment the interface with methods to, e.g., read a number of files at once? Could be important for high-latency implementations. 

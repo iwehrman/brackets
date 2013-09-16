@@ -72,6 +72,7 @@ define(function (require, exports, module) {
      * @return boolean true if the file should be displayed
      */
     var _exclusionListRegEx = /\.pyc$|^\.git$|^\.gitignore$|^\.gitmodules$|^\.svn$|^\.DS_Store$|^Thumbs\.db$|^\.hg$|^CVS$|^\.cvsignore$|^\.gitattributes$|^\.hgtags$|^\.hgignore$/;
+    // IAN-FS: it seems like this exclusion should be at a higher abstraction layer; e.g., the file tree
     FileSystem.prototype.shouldShow = function (path) {
         var name = path.substr(path.lastIndexOf("/") + 1);
         
@@ -144,7 +145,7 @@ define(function (require, exports, module) {
         
         this._impl.exists(path, function (exists) {
             if (exists) {
-                // TODO FileSystem ---- IAN: is path guaranteed to exist in the index at this point?
+                // TODO FileSystem ---- IAN-FS: is path guaranteed to exist in the index at this point?
                 result.resolve(this._index.getEntry(path));
             } else {
                 result.reject();
@@ -199,6 +200,7 @@ define(function (require, exports, module) {
     FileSystem.prototype.getDirectoryContents = function (directory) {
         var i, entryPath, entry, result = new $.Deferred();
         
+        // IAN-FS: when caching promises, we need to ensure that the promise will eventually resolve or reject
         if (directory._contentsPromise) {
             // Existing promise for this directory's contents. Return it.
             return directory._contentsPromise;
@@ -326,6 +328,7 @@ define(function (require, exports, module) {
     FileSystem.prototype._scanDirectory = function (directoryPath) {
         var directory = this.getDirectoryForPath(directoryPath);
         
+        // IAN-FS: this won't terminate if there is a symlink to a parent directory
         this.getDirectoryContents(directory).done(function (entries) {
             var i;
             
@@ -337,7 +340,7 @@ define(function (require, exports, module) {
         }.bind(this));
         this._impl.watchPath(directoryPath);
         
-        // TODO FileSystem ---- IAN: this should return a promise
+        // TODO FileSystem ---- IAN-FS: this should return a promise
     };
     
     /**
@@ -455,6 +458,8 @@ define(function (require, exports, module) {
         
         // Start indexing from the new root path
         this._scanDirectory(rootPath);
+        
+        // IAN-FS: should this wait for the directory scan to complete?
     };
     
     // Export the FileSystem class
